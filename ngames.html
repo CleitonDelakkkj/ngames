@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>N'Games - Plataforma Educacional</title>
+<style>
+  :root {
+    --red: #CC1717;
+    --red-light: #e63535;
+    --blue: #1340A6;
+    --blue-light: #2255d4;
+    --white: #FFFFFF;
+    --gray-light: #f4f6fb;
+    --gray: #e2e6f0;
+    --gray-dark: #6b7280;
+    --text: #1a1a2e;
+    --shadow: 0 2px 12px rgba(19,64,166,0.10);
+    --radius: 14px;
+    /* Subject colors */
+    --port: #7C3AED;
+    --mat: #0891B2;
+    --artes: #D97706;
+    --hist: #065F46;
+    --cien: #15803D;
+    --geo: #B45309;
+    --rel: #9D174D;
+    --ing: #1D4ED8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--gray-light); color: var(--text); min-height: 100vh; }
+
+  /* AUTH */
+  #auth-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--red) 0%, var(--blue) 100%);
+  }
+  .auth-box {
+    background: var(--white); border-radius: 24px; padding: 48px 40px; width: 380px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18); text-align: center;
+  }
+  .auth-logo { font-size: 2.8rem; font-weight: 900; color: var(--red); letter-spacing: -1px; margin-bottom: 4px; }
+  .auth-logo span { color: var(--blue); }
+  .auth-sub { color: var(--gray-dark); font-size: 0.95rem; margin-bottom: 28px; }
+  .auth-box input {
+    width: 100%; padding: 13px 16px; border: 2px solid var(--gray); border-radius: 10px;
+    font-size: 1rem; margin-bottom: 14px; transition: border 0.2s;
+    background: var(--gray-light);
+  }
+  .auth-box input:focus { outline: none; border-color: var(--blue); }
+  .auth-btn {
+    width: 100%; padding: 14px; background: var(--red); color: white; border: none;
+    border-radius: 10px; font-size: 1.1rem; font-weight: 700; cursor: pointer;
+    transition: background 0.2s; margin-bottom: 12px;
+  }
+  .auth-btn:hover { background: var(--red-light); }
+  .auth-btn.secondary {
+    background: var(--blue); margin-bottom: 0;
+  }
+  .auth-btn.secondary:hover { background: var(--blue-light); }
+  .auth-error { color: var(--red); font-size: 0.9rem; margin-bottom: 10px; display: none; }
+  .auth-toggle { color: var(--blue); cursor: pointer; font-size: 0.92rem; margin-top: 12px; display: inline-block; }
+  .auth-toggle:hover { text-decoration: underline; }
+
+  /* MAIN LAYOUT */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+
+  /* TOP NAV */
+  .top-nav {
+    background: linear-gradient(90deg, var(--red) 0%, #a01010 100%);
+    display: flex; align-items: center; padding: 0 0 0 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15); position: sticky; top: 0; z-index: 100;
+  }
+  .top-logo {
+    font-size: 1.6rem; font-weight: 900; color: white; padding: 0 24px;
+    letter-spacing: -0.5px; white-space: nowrap;
+  }
+  .top-logo span { color: #ffd700; }
+  .subject-tabs {
+    display: flex; overflow-x: auto; flex: 1; scrollbar-width: none;
+  }
+  .subject-tabs::-webkit-scrollbar { display: none; }
+  .subject-tab {
+    padding: 16px 22px; color: rgba(255,255,255,0.75); cursor: pointer;
+    font-size: 0.93rem; font-weight: 600; white-space: nowrap;
+    border-bottom: 3px solid transparent; transition: all 0.2s;
+    display: flex; align-items: center; gap: 7px; user-select: none;
+  }
+  .subject-tab:hover { color: white; background: rgba(255,255,255,0.1); }
+  .subject-tab.active { color: white; border-bottom-color: #ffd700; background: rgba(255,255,255,0.12); }
+  .subject-tab .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+  .nav-right { display: flex; align-items: center; gap: 10px; padding: 0 18px; }
+  .user-badge {
+    background: rgba(255,255,255,0.15); color: white; border-radius: 20px;
+    padding: 6px 14px; font-size: 0.88rem; font-weight: 600; white-space: nowrap;
+  }
+  .xp-badge {
+    background: #ffd700; color: #333; border-radius: 20px;
+    padding: 6px 14px; font-size: 0.88rem; font-weight: 700; white-space: nowrap;
+  }
+  .logout-btn {
+    background: rgba(255,255,255,0.18); color: white; border: none; padding: 7px 14px;
+    border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+    transition: background 0.2s;
+  }
+  .logout-btn:hover { background: rgba(255,255,255,0.28); }
+
+  /* BODY LAYOUT */
+  .body-layout { display: flex; flex: 1; min-height: calc(100vh - 56px); }
+
+  /* LEFT SIDEBAR */
+  .left-sidebar {
+    width: 200px; background: var(--blue); padding: 20px 0;
+    display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;
+    min-height: 100%;
+  }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 12px; padding: 13px 22px;
+    color: rgba(255,255,255,0.72); cursor: pointer; font-size: 0.97rem; font-weight: 600;
+    border-radius: 0 24px 24px 0; margin-right: 14px; transition: all 0.2s; user-select: none;
+  }
+  .sidebar-item:hover { color: white; background: rgba(255,255,255,0.12); }
+  .sidebar-item.active { color: white; background: rgba(255,255,255,0.22); }
+  .sidebar-item .icon { font-size: 1.2rem; }
+
+  /* MAIN CONTENT */
+  .main-content { flex: 1; padding: 28px 32px; overflow-y: auto; }
+
+  /* FEED */
+  .feed-composer {
+    background: white; border-radius: var(--radius); padding: 20px 24px;
+    margin-bottom: 22px; box-shadow: var(--shadow);
+  }
+  .feed-composer textarea {
+    width: 100%; border: 2px solid var(--gray); border-radius: 10px;
+    padding: 12px 14px; font-size: 1rem; resize: none; font-family: inherit;
+    background: var(--gray-light); transition: border 0.2s;
+  }
+  .feed-composer textarea:focus { outline: none; border-color: var(--blue); }
+  .feed-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .btn {
+    padding: 9px 18px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 0.93rem; font-weight: 600; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: var(--blue); color: white; }
+  .btn-primary:hover { background: var(--blue-light); }
+  .btn-red { background: var(--red); color: white; }
+  .btn-red:hover { background: var(--red-light); }
+  .btn-outline { background: white; color: var(--blue); border: 2px solid var(--blue); }
+  .btn-outline:hover { background: var(--gray-light); }
+  .btn-gray { background: var(--gray); color: var(--text); }
+  .btn-gray:hover { background: var(--gray-dark); color: white; }
+
+  .feed-post {
+    background: white; border-radius: var(--radius); padding: 22px 24px;
+    margin-bottom: 18px; box-shadow: var(--shadow);
+  }
+  .post-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .post-avatar {
+    width: 42px; height: 42px; border-radius: 50%; background: var(--blue);
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 1.1rem;
+  }
+  .post-author { font-weight: 700; font-size: 1rem; }
+  .post-time { color: var(--gray-dark); font-size: 0.83rem; }
+  .post-body { font-size: 0.98rem; line-height: 1.65; margin-bottom: 14px; }
+  .post-media { margin-bottom: 14px; }
+  .post-media img, .post-media video {
+    max-width: 100%; border-radius: 10px; max-height: 320px; object-fit: cover;
+  }
+  .post-reactions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .reaction-btn {
+    padding: 6px 14px; border-radius: 20px; border: 2px solid var(--gray);
+    background: var(--gray-light); cursor: pointer; font-size: 1rem;
+    transition: all 0.15s; display: flex; align-items: center; gap: 5px; font-weight: 600;
+  }
+  .reaction-btn:hover, .reaction-btn.active { border-color: var(--blue); background: #e8f0fe; }
+  .comment-section { border-top: 1.5px solid var(--gray); padding-top: 12px; }
+  .comment-input { display: flex; gap: 8px; margin-top: 10px; }
+  .comment-input input {
+    flex: 1; padding: 8px 14px; border: 2px solid var(--gray); border-radius: 20px;
+    font-size: 0.93rem; background: var(--gray-light);
+  }
+  .comment-input input:focus { outline: none; border-color: var(--blue); }
+  .comment { display: flex; gap: 10px; margin-top: 10px; align-items: flex-start; }
+  .comment .post-avatar { width: 30px; height: 30px; font-size: 0.8rem; flex-shrink: 0; }
+  .comment-bubble {
+    background: var(--gray-light); border-radius: 14px; padding: 8px 14px;
+    font-size: 0.92rem; flex: 1;
+  }
+  .comment-author { font-weight: 700; font-size: 0.83rem; margin-bottom: 2px; }
+  .comment-reactions { display: flex; gap: 5px; margin-top: 5px; }
+  .comment-reaction {
+    padding: 2px 8px; border-radius: 12px; border: 1.5px solid var(--gray);
+    background: white; cursor: pointer; font-size: 0.9rem; transition: all 0.15s;
+  }
+  .comment-reaction:hover, .comment-reaction.active { border-color: var(--blue); background: #e8f0fe; }
+  .delete-btn {
+    margin-left: auto; background: none; border: none; cursor: pointer;
+    color: var(--red); font-size: 0.85rem; font-weight: 600; padding: 4px 8px; border-radius: 6px;
+  }
+  .delete-btn:hover { background: #fee2e2; }
+
+  /* SUBJECT CONTENT */
+  .subject-header {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 24px;
+    background: white; border-radius: var(--radius); padding: 20px 24px;
+    box-shadow: var(--shadow);
+  }
+  .subject-color-bar { width: 8px; height: 50px; border-radius: 4px; }
+  .subject-title { font-size: 1.6rem; font-weight: 800; }
+  .subject-desc { color: var(--gray-dark); font-size: 0.95rem; margin-top: 3px; }
+
+  .content-card {
+    background: white; border-radius: var(--radius); padding: 22px 24px;
+    margin-bottom: 18px; box-shadow: var(--shadow); border-left: 5px solid var(--blue);
+  }
+  .content-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+  .content-card p { color: var(--gray-dark); line-height: 1.6; }
+  .content-card .meta { font-size: 0.82rem; color: var(--gray-dark); margin-bottom: 8px; }
+
+  /* ACTIVITY / AI */
+  .activity-card {
+    background: linear-gradient(135deg, #1340A6 0%, #7C3AED 100%);
+    border-radius: var(--radius); padding: 24px 28px; color: white;
+    margin-top: 18px; box-shadow: 0 4px 20px rgba(19,64,166,0.3);
+  }
+  .activity-card h3 { font-size: 1.2rem; font-weight: 800; margin-bottom: 8px; }
+  .activity-card p { opacity: 0.9; line-height: 1.6; margin-bottom: 16px; }
+  .ai-question { background: rgba(255,255,255,0.15); border-radius: 10px; padding: 16px 20px; margin-bottom: 12px; }
+  .ai-option {
+    padding: 10px 16px; border-radius: 8px; background: rgba(255,255,255,0.12);
+    margin-top: 8px; cursor: pointer; font-size: 0.95rem; transition: background 0.15s;
+    border: 2px solid transparent;
+  }
+  .ai-option:hover { background: rgba(255,255,255,0.25); }
+  .ai-option.correct { background: rgba(52,211,153,0.3); border-color: #34d399; }
+  .ai-option.wrong { background: rgba(239,68,68,0.3); border-color: #ef4444; }
+  .ai-loading { display: flex; align-items: center; gap: 10px; padding: 16px; }
+  .ai-spinner {
+    width: 22px; height: 22px; border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* AVALIAÇÔES */
+  .eval-card {
+    background: white; border-radius: var(--radius); padding: 22px 24px;
+    margin-bottom: 18px; box-shadow: var(--shadow);
+  }
+  .eval-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+  .eval-badge {
+    display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem;
+    font-weight: 700; margin-bottom: 10px;
+  }
+  .badge-available { background: #dcfce7; color: #166534; }
+  .badge-upcoming { background: #fef9c3; color: #92400e; }
+  .badge-closed { background: #fee2e2; color: #991b1b; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.93rem; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 10px 14px; border: 2px solid var(--gray); border-radius: 9px;
+    font-size: 0.95rem; font-family: inherit; background: var(--gray-light); transition: border 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none; border-color: var(--blue);
+  }
+
+  /* JOGOS */
+  .game-card {
+    background: white; border-radius: var(--radius); padding: 22px 24px;
+    margin-bottom: 18px; box-shadow: var(--shadow); display: flex; gap: 18px; align-items: center;
+  }
+  .game-icon { font-size: 2.5rem; }
+  .game-info { flex: 1; }
+  .game-info h3 { font-weight: 700; font-size: 1.08rem; margin-bottom: 4px; }
+  .game-info p { color: var(--gray-dark); font-size: 0.9rem; }
+  .locked { opacity: 0.5; }
+  .lock-icon { font-size: 1.3rem; }
+
+  /* RANKING */
+  .ranking-card {
+    background: white; border-radius: var(--radius); padding: 22px 24px;
+    box-shadow: var(--shadow);
+  }
+  .rank-item {
+    display: flex; align-items: center; gap: 14px; padding: 12px 0;
+    border-bottom: 1.5px solid var(--gray);
+  }
+  .rank-item:last-child { border-bottom: none; }
+  .rank-pos { font-size: 1.3rem; font-weight: 900; width: 32px; text-align: center; }
+  .rank-pos.gold { color: #f59e0b; }
+  .rank-pos.silver { color: #9ca3af; }
+  .rank-pos.bronze { color: #b45309; }
+  .rank-name { flex: 1; font-weight: 600; }
+  .rank-xp { font-weight: 700; color: var(--blue); }
+  .rank-level { background: var(--blue); color: white; border-radius: 12px; padding: 3px 10px; font-size: 0.8rem; font-weight: 700; }
+
+  /* PROGRESS BAR */
+  .xp-bar-wrap { background: var(--gray); border-radius: 10px; height: 10px; margin: 6px 0; overflow: hidden; }
+  .xp-bar { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--blue), #7C3AED); transition: width 0.5s; }
+  .level-info { font-size: 0.82rem; color: var(--gray-dark); display: flex; justify-content: space-between; }
+
+  /* ADMIN / PROFESSOR PANEL */
+  .panel-section { background: white; border-radius: var(--radius); padding: 24px 28px; margin-bottom: 22px; box-shadow: var(--shadow); }
+  .panel-section h2 { font-size: 1.2rem; font-weight: 800; margin-bottom: 18px; color: var(--blue); border-bottom: 2px solid var(--gray); padding-bottom: 10px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 11px 14px; font-size: 0.92rem; border-bottom: 1.5px solid var(--gray); }
+  th { font-weight: 700; color: var(--blue); background: var(--gray-light); }
+  tr:hover td { background: #f8faff; }
+
+  /* NEURODIVERGENT helpers */
+  .nd-tip {
+    background: #fef9c3; border-left: 4px solid #f59e0b; border-radius: 8px;
+    padding: 12px 16px; font-size: 0.92rem; margin-bottom: 16px; display: flex; gap: 10px;
+  }
+  .nd-tip .icon { font-size: 1.3rem; }
+  .read-aloud-btn {
+    background: var(--gray-light); border: 2px solid var(--gray); border-radius: 8px;
+    padding: 6px 12px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .read-aloud-btn:hover { border-color: var(--blue); }
+
+  /* MISC */
+  .section-title { font-size: 1.3rem; font-weight: 800; margin-bottom: 18px; color: var(--text); }
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--gray-dark); font-size: 1rem; }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 999;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal {
+    background: white; border-radius: 18px; padding: 32px 36px; max-width: 520px;
+    width: 100%; max-height: 85vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+  }
+  .modal h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 18px; color: var(--blue); }
+  .modal-close { float: right; background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--gray-dark); }
+  .success-msg { background: #dcfce7; color: #166534; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-weight: 600; display: none; }
+  .tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 700; margin-right: 5px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px;
+    border-radius: 20px; font-size: 0.83rem; font-weight: 600; background: var(--gray-light); color: var(--text);
+  }
+  /* Accessibility */
+  :focus-visible { outline: 3px solid #ffd700; outline-offset: 2px; }
+  @media (max-width: 700px) {
+    .left-sidebar { width: 56px; }
+    .sidebar-item span { display: none; }
+    .main-content { padding: 14px; }
+    .auth-box { padding: 28px 16px; width: 98vw; }
+    .modal { padding: 18px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">N'<span>Games</span></div>
+    <div class="auth-sub">Plataforma Educacional Inclusiva</div>
+    <div class="auth-error" id="auth-error">Usuário ou senha inválidos.</div>
+    <div id="login-form">
+      <input type="text" id="auth-user" placeholder="Usuário" autocomplete="username" aria-label="Usuário">
+      <input type="password" id="auth-pass" placeholder="Senha" autocomplete="current-password" aria-label="Senha">
+      <button class="auth-btn" onclick="doLogin()">Entrar</button>
+      <div class="auth-toggle" onclick="showRegister()" tabindex="0" role="button">Ainda não tem conta? Criar conta de aluno</div>
+    </div>
+    <div id="register-form" style="display:none">
+      <input type="text" id="reg-name" placeholder="Seu nome completo" aria-label="Nome completo">
+      <input type="text" id="reg-user" placeholder="Escolha um usuário" aria-label="Usuário">
+      <input type="password" id="reg-pass" placeholder="Crie uma senha" aria-label="Senha">
+      <button class="auth-btn" onclick="doRegister()">Criar conta</button>
+      <div class="auth-toggle" onclick="showLogin()" tabindex="0" role="button">Já tenho conta</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <!-- TOP NAV -->
+  <nav class="top-nav" role="navigation" aria-label="Matérias">
+    <div class="top-logo">N'<span>Games</span></div>
+    <div class="subject-tabs" id="subject-tabs">
+      <div class="subject-tab" data-subj="port" onclick="selectSubject('port')">
+        <span class="dot" style="background:var(--port)"></span> Português
+      </div>
+      <div class="subject-tab" data-subj="mat" onclick="selectSubject('mat')">
+        <span class="dot" style="background:var(--mat)"></span> Matemática
+      </div>
+      <div class="subject-tab" data-subj="artes" onclick="selectSubject('artes')">
+        <span class="dot" style="background:var(--artes)"></span> Artes
+      </div>
+      <div class="subject-tab" data-subj="hist" onclick="selectSubject('hist')">
+        <span class="dot" style="background:var(--hist)"></span> História
+      </div>
+      <div class="subject-tab" data-subj="cien" onclick="selectSubject('cien')">
+        <span class="dot" style="background:var(--cien)"></span> Ciências
+      </div>
+      <div class="subject-tab" data-subj="geo" onclick="selectSubject('geo')">
+        <span class="dot" style="background:var(--geo)"></span> Geografia
+      </div>
+      <div class="subject-tab" data-subj="rel" onclick="selectSubject('rel')">
+        <span class="dot" style="background:var(--rel)"></span> Religião
+      </div>
+      <div class="subject-tab" data-subj="ing" onclick="selectSubject('ing')">
+        <span class="dot" style="background:var(--ing)"></span> Inglês
+      </div>
+    </div>
+    <div class="nav-right">
+      <div class="user-badge" id="nav-username">👤 Usuário</div>
+      <div class="xp-badge" id="nav-xp">⭐ 0 XP | Nv 1</div>
+      <button class="logout-btn" onclick="doLogout()">Sair</button>
+    </div>
+  </nav>
+
+  <!-- BODY -->
+  <div class="body-layout">
+    <!-- LEFT SIDEBAR -->
+    <aside class="left-sidebar" role="navigation" aria-label="Menu principal">
+      <div class="sidebar-item active" data-section="feed" onclick="selectSection('feed')">
+        <span class="icon">🏠</span><span>Feed</span>
+      </div>
+      <div class="sidebar-item" data-section="games" onclick="selectSection('games')">
+        <span class="icon">🎮</span><span>Jogos</span>
+      </div>
+      <div class="sidebar-item" data-section="avaliacoes" onclick="selectSection('avaliacoes')">
+        <span class="icon">📝</span><span>Avaliações</span>
+      </div>
+      <div class="sidebar-item" data-section="exercicios" onclick="selectSection('exercicios')">
+        <span class="icon">📚</span><span>Exercícios</span>
+      </div>
+      <div class="sidebar-item" data-section="ranking" onclick="selectSection('ranking')">
+        <span class="icon">🏆</span><span>Ranking</span>
+      </div>
+      <div id="prof-menu" style="display:none; margin-top: 18px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 12px;">
+        <div class="sidebar-item" data-section="professor" onclick="selectSection('professor')">
+          <span class="icon">👨‍🏫</span><span>Painel Prof.</span>
+        </div>
+        <div class="sidebar-item" data-section="cadastrar" onclick="selectSection('cadastrar')">
+          <span class="icon">➕</span><span>Cadastrar Aluno</span>
+        </div>
+      </div>
+      <div id="admin-menu" style="display:none;">
+        <div class="sidebar-item" data-section="admin" onclick="selectSection('admin')">
+          <span class="icon">⚙️</span><span>Administrador</span>
+        </div>
+        <div class="sidebar-item" data-section="cadastrar" onclick="selectSection('cadastrar')">
+          <span class="icon">➕</span><span>Cadastrar Aluno</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content" id="main-content" role="main"></main>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" style="display:none" onclick="closeModal(event)">
+  <div class="modal" id="modal-box" role="dialog" aria-modal="true">
+    <button class="modal-close" onclick="closeModal()" aria-label="Fechar">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+// ===================== CONFIGURAÇÃO DA IA =====================
+// ⚠️ Coloque sua chave da API da Anthropic aqui:
+
+
+// Função central para chamar a IA (usa proxy CORS para funcionar sem servidor)
+async function callClaude(messages, max_tokens = 1000) {
+  const PROXY = 'https://corsproxy.io/?';
+  const TARGET = 'https://api.anthropic.com/v1/messages';
+  const resp = await fetch(PROXY + encodeURIComponent(TARGET), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens, messages }),
+  });
+  if (!resp.ok) {
+    const err = await resp.text();
+    throw new Error('Erro API (' + resp.status + '): ' + err);
+  }
+  const data = await resp.json();
+  return data.content.map(i => i.text || '').join('').replace(/```json|```/g, '').trim();
+}
+
+// ===================== DATA STORE =====================
+const TEACHERS = {
+  port1:  { pass:'port2',  name:'Prof. Português', subj:'port',  role:'teacher' },
+  mat1:   { pass:'mat2',   name:'Prof. Matemática', subj:'mat',  role:'teacher' },
+  artes1: { pass:'artes2', name:'Prof. Artes',    subj:'artes',  role:'teacher' },
+  hist1:  { pass:'hist2',  name:'Prof. História', subj:'hist',   role:'teacher' },
+  cien1:  { pass:'cien2',  name:'Prof. Ciências', subj:'cien',   role:'teacher' },
+  geo1:   { pass:'geo2',   name:'Prof. Geografia',subj:'geo',    role:'teacher' },
+  rel1:   { pass:'rel2',   name:'Prof. Religião', subj:'rel',    role:'teacher' },
+  ing1:   { pass:'ing2',   name:'Prof. Inglês',   subj:'ing',    role:'teacher' },
+  admin1: { pass:'admin1', name:'Administrador',  subj:'all',    role:'admin' },
+};
+
+const SUBJECTS = {
+  port:  { name:'Português',   color:'#7C3AED', icon:'📖' },
+  mat:   { name:'Matemática',  color:'#0891B2', icon:'🔢' },
+  artes: { name:'Artes',       color:'#D97706', icon:'🎨' },
+  hist:  { name:'História',    color:'#065F46', icon:'🏛️' },
+  cien:  { name:'Ciências',    color:'#15803D', icon:'🔬' },
+  geo:   { name:'Geografia',   color:'#B45309', icon:'🌍' },
+  rel:   { name:'Religião',    color:'#9D174D', icon:'✝️' },
+  ing:   { name:'Inglês',      color:'#1D4ED8', icon:'🌐' },
+};
+
+const EXTRA_SUBJECTS = {
+  5:  { name:'Astronomia Básica', icon:'🌌', desc:'Descubra os mistérios do universo!' },
+  10: { name:'Culinária e Química', icon:'🧪', desc:'Ciência dentro da cozinha!' },
+  15: { name:'Programação Visual', icon:'💻', desc:'Criação de arte digital e código!' },
+  20: { name:'Filosofia Jovem', icon:'💡', desc:'Pense, questione, crie!' },
+  25: { name:'Música e Matemática', icon:'🎵', desc:'Ritmo é número!' },
+};
+
+const GAMES = [
+  { id:1, name:'Quiz Rápido', icon:'❓', desc:'Responda perguntas sobre todas as matérias!', minLevel:1 },
+  { id:2, name:'Caça Palavras', icon:'🔠', desc:'Encontre as palavras escondidas do vocabulário!', minLevel:1 },
+  { id:3, name:'Jogo da Memória', icon:'🃏', desc:'Combine pares de conceitos e definições!', minLevel:3 },
+  { id:4, name:'Batalha de Conhecimento', icon:'⚔️', desc:'Desafie outros alunos em duelos de perguntas!', minLevel:5 },
+  { id:5, name:'Missão Matemática', icon:'🚀', desc:'Aventura espacial resolvendo problemas!', minLevel:7 },
+  { id:6, name:'Historia em HQ', icon:'📚', desc:'Aprenda história em quadrinhos interativas!', minLevel:10 },
+];
+
+function loadDB() {
+  return JSON.parse(localStorage.getItem('ngames_db') || JSON.stringify({
+    users: {},
+    feed: [],
+    contents: { port:[], mat:[], artes:[], hist:[], cien:[], geo:[], rel:[], ing:[] },
+    evals: { port:[], mat:[], artes:[], hist:[], cien:[], geo:[], rel:[], ing:[] },
+    evalAnswers: {},
+    nextPostId: 1,
+    nextContentId: 1,
+    nextEvalId: 1,
+  }));
+}
+function saveDB() { localStorage.setItem('ngames_db', JSON.stringify(db)); }
+let db = loadDB();
+
+// Current session
+let currentUser = null;
+let currentSection = 'feed';
+let currentSubject = null;
+
+// XP system
+function getLevel(xp) { return Math.floor(xp / 200) + 1; }
+function getXPForNextLevel(xp) { const l = getLevel(xp); return l * 200; }
+function getLevelProgress(xp) {
+  const l = getLevel(xp); const base = (l-1)*200; const next = l*200;
+  return Math.round(((xp - base) / (next - base)) * 100);
+}
+function addXP(amount) {
+  if (!currentUser || currentUser.role !== 'student') return;
+  const prevLevel = getLevel(currentUser.xp || 0);
+  currentUser.xp = (currentUser.xp || 0) + amount;
+  db.users[currentUser.username].xp = currentUser.xp;
+  saveDB();
+  updateNavXP();
+  const newLevel = getLevel(currentUser.xp);
+  if (newLevel > prevLevel) {
+    showToast(`🎉 Parabéns! Você subiu para o Nível ${newLevel}!`);
+  } else {
+    showToast(`⭐ +${amount} XP conquistados!`);
+  }
+}
+
+// ===================== AUTH =====================
+function showLogin() {
+  document.getElementById('login-form').style.display = '';
+  document.getElementById('register-form').style.display = 'none';
+  document.getElementById('auth-error').style.display = 'none';
+}
+function showRegister() {
+  document.getElementById('login-form').style.display = 'none';
+  document.getElementById('register-form').style.display = '';
+  document.getElementById('auth-error').style.display = 'none';
+}
+function doLogin() {
+  const u = document.getElementById('auth-user').value.trim();
+  const p = document.getElementById('auth-pass').value;
+  const err = document.getElementById('auth-error');
+  // Check teacher/admin
+  if (TEACHERS[u] && TEACHERS[u].pass === p) {
+    currentUser = { username: u, name: TEACHERS[u].name, role: TEACHERS[u].role, subj: TEACHERS[u].subj };
+    startApp();
+    return;
+  }
+  // Check student
+  if (db.users[u] && db.users[u].pass === p) {
+    currentUser = { username: u, name: db.users[u].name, role: 'student', xp: db.users[u].xp || 0 };
+    startApp();
+    return;
+  }
+  err.style.display = 'block';
+}
+function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const u = document.getElementById('reg-user').value.trim();
+  const p = document.getElementById('reg-pass').value;
+  if (!name || !u || !p) { alert('Preencha todos os campos.'); return; }
+  if (TEACHERS[u] || db.users[u]) { alert('Usuário já existe. Escolha outro.'); return; }
+  db.users[u] = { name, pass: p, xp: 0, completedContents: [] };
+  saveDB();
+  currentUser = { username: u, name, role: 'student', xp: 0 };
+  startApp();
+}
+function doLogout() {
+  currentUser = null; currentSection = 'feed'; currentSubject = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('auth-user').value = '';
+  document.getElementById('auth-pass').value = '';
+}
+function startApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  updateNavXP();
+  // Show teacher/admin menus
+  document.getElementById('prof-menu').style.display = (currentUser.role === 'teacher') ? '' : 'none';
+  document.getElementById('admin-menu').style.display = (currentUser.role === 'admin') ? '' : 'none';
+  renderSection('feed');
+}
+function updateNavXP() {
+  document.getElementById('nav-username').textContent = '👤 ' + currentUser.name;
+  if (currentUser.role === 'student') {
+    const xp = currentUser.xp || 0;
+    const lv = getLevel(xp);
+    document.getElementById('nav-xp').textContent = `⭐ ${xp} XP | Nv ${lv}`;
+  } else {
+    document.getElementById('nav-xp').textContent = currentUser.role === 'admin' ? '⚙️ Admin' : '👨‍🏫 Professor';
+  }
+}
+
+// ===================== NAVIGATION =====================
+function selectSection(section) {
+  currentSection = section; currentSubject = null;
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.toggle('active', el.dataset.section === section));
+  document.querySelectorAll('.subject-tab').forEach(el => el.classList.remove('active'));
+  renderSection(section);
+}function selectSubject(subj) {
+  currentSubject = subj; currentSection = 'subject';
+  document.querySelectorAll('.subject-tab').forEach(el => el.classList.toggle('active', el.dataset.subj === subj));
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+  renderSection('subject');
+}
+
+function renderSection(section) {
+  const c = document.getElementById('main-content');
+  if (!c) return;
+  if (section === 'feed') c.innerHTML = renderFeed();
+  else if (section === 'subject') c.innerHTML = renderSubject();
+  else if (section === 'games') c.innerHTML = renderGames();
+  else if (section === 'avaliacoes') c.innerHTML = renderAvaliacoes();
+  else if (section === 'exercicios') c.innerHTML = renderExercicios();
+  else if (section === 'ranking') c.innerHTML = renderRanking();
+  else if (section === 'professor') c.innerHTML = renderProfPanel();
+  else if (section === 'admin') c.innerHTML = renderAdminPanel();
+  else if (section === 'cadastrar') c.innerHTML = renderCadastrarAluno();
+  else c.innerHTML = renderFeed();
+}
+
+// ===================== FEED =====================
+const POST_EMOJIS = ['👍','❤️','😂','😮','😢','🔥','🌟'];
+
+function renderFeed() {
+  const canPost = true; // All users can post
+  const posts = db.feed.slice().reverse();
+  return `
+    <div class="section-title">📰 Feed da Turma</div>
+    ${canPost ? `
+    <div class="feed-composer">
+      <textarea id="feed-text" rows="3" placeholder="Compartilhe algo com a turma... 💬" aria-label="Escrever no feed"></textarea>
+      <div class="feed-actions">
+        <button class="btn btn-primary" onclick="submitPost()">✉️ Publicar</button>
+        <label class="btn btn-outline" style="cursor:pointer">
+          🖼️ Imagem <input type="file" id="feed-img" accept="image/*" style="display:none" onchange="previewMedia('img')">
+        </label>
+        <label class="btn btn-outline" style="cursor:pointer">
+          🎥 Vídeo <input type="file" id="feed-vid" accept="video/*" style="display:none" onchange="previewMedia('vid')">
+        </label>
+        <span id="media-preview" style="align-self:center;font-size:0.85rem;color:var(--gray-dark)"></span>
+      </div>
+    </div>` : ''}
+    ${posts.length === 0 ? `<div class="empty-state"><div class="icon">📭</div><p>Nenhuma publicação ainda. Seja o primeiro!</p></div>` : posts.map(p => renderPost(p)).join('')}
+  `;
+}
+
+function previewMedia(type) {
+  const file = document.getElementById(type === 'img' ? 'feed-img' : 'feed-vid').files[0];
+  if (file) document.getElementById('media-preview').textContent = '✅ ' + file.name;
+}
+
+function submitPost() {
+  const text = document.getElementById('feed-text').value.trim();
+  const imgFile = document.getElementById('feed-img').files[0];
+  const vidFile = document.getElementById('feed-vid').files[0];
+  if (!text && !imgFile && !vidFile) return;
+  const readMedia = (file, type, cb) => {
+    if (!file) return cb(null);
+    const r = new FileReader();
+    r.onload = e => cb({ type, data: e.target.result, name: file.name });
+    r.readAsDataURL(file);
+  };
+  readMedia(imgFile, 'image', imgData => {
+    readMedia(vidFile, 'video', vidData => {
+      const post = {
+        id: db.nextPostId++,
+        author: currentUser.name,
+        username: currentUser.username,
+        role: currentUser.role,
+        time: new Date().toLocaleString('pt-BR'),
+        text,
+        media: imgData || vidData || null,
+        reactions: {},
+        comments: [],
+      };
+      db.feed.push(post);
+      saveDB();
+      renderSection('feed');
+    });
+  });
+}
+
+function renderPost(p) {
+  const isOwner = currentUser && (currentUser.username === p.username || currentUser.role === 'admin');
+  const mediaHtml = p.media
+    ? p.media.type === 'image'
+      ? `<div class="post-media"><img src="${p.media.data}" alt="${p.media.name}" loading="lazy"></div>`
+      : `<div class="post-media"><video controls src="${p.media.data}" aria-label="Vídeo publicado"></video></div>`
+    : '';
+  const reactions = POST_EMOJIS.map(e => {
+    const count = (p.reactions[e] || []).length;
+    const isActive = currentUser && (p.reactions[e] || []).includes(currentUser.username);
+    return `<button class="reaction-btn ${isActive ? 'active' : ''}" onclick="reactPost(${p.id},'${e}')" aria-label="Reagir com ${e}" aria-pressed="${isActive}">${e} ${count > 0 ? count : ''}</button>`;
+  }).join('');
+  const comments = (p.comments || []).map(c => renderComment(p.id, c)).join('');
+  const initials = p.author.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  return `
+    <article class="feed-post" aria-label="Post de ${p.author}">
+      <div class="post-header">
+        <div class="post-avatar" aria-hidden="true">${initials}</div>
+        <div>
+          <div class="post-author">${p.author} ${p.role !== 'student' ? `<span class="chip" style="font-size:0.75rem">${p.role === 'admin' ? '⚙️ Admin' : '👨‍🏫 Prof'}</span>` : ''}</div>
+          <div class="post-time">${p.time}</div>
+        </div>
+        ${isOwner ? `<button class="delete-btn" onclick="deletePost(${p.id})" aria-label="Apagar post">🗑️ Apagar</button>` : ''}
+      </div>
+      ${p.text ? `<div class="post-body">${p.text}</div>` : ''}
+      ${mediaHtml}
+      <div class="post-reactions" role="group" aria-label="Reações">${reactions}</div>
+      <div class="comment-section">
+        ${comments}
+        <div class="comment-input">
+          <input type="text" id="comment-input-${p.id}" placeholder="Escreva um comentário..." aria-label="Comentário"
+            onkeydown="if(event.key==='Enter')submitComment(${p.id})">
+          <button class="btn btn-primary" onclick="submitComment(${p.id})">💬</button>
+        </div>
+      </div>
+    </article>`;
+}
+
+function renderComment(postId, c) {
+  const isOwner = currentUser && (currentUser.username === c.username || currentUser.role === 'admin');
+  const initials = c.author.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const reactions = POST_EMOJIS.slice(0,5).map(e => {
+    const count = (c.reactions[e] || []).length;
+    const isActive = currentUser && (c.reactions[e] || []).includes(currentUser.username);
+    return `<button class="comment-reaction ${isActive ? 'active' : ''}" onclick="reactComment(${postId},'${c.id}','${e}')" aria-label="Reagir ${e}">${e}${count > 0 ? ' '+count : ''}</button>`;
+  }).join('');
+  return `
+    <div class="comment">
+      <div class="post-avatar" aria-hidden="true">${initials}</div>
+      <div class="comment-bubble">
+        <div class="comment-author">${c.author} · <span style="font-weight:400;color:var(--gray-dark)">${c.time}</span>
+          ${isOwner ? `<button class="delete-btn" style="padding:2px 6px;font-size:0.78rem" onclick="deleteComment(${postId},'${c.id}')">🗑️</button>` : ''}
+        </div>
+        <div>${c.text}</div>
+        <div class="comment-reactions" role="group" aria-label="Reações ao comentário">${reactions}</div>
+      </div>
+    </div>`;
+}
+
+function reactPost(postId, emoji) {
+  const post = db.feed.find(p => p.id === postId);
+  if (!post || !currentUser) return;
+  if (!post.reactions[emoji]) post.reactions[emoji] = [];
+  const idx = post.reactions[emoji].indexOf(currentUser.username);
+  if (idx >= 0) post.reactions[emoji].splice(idx, 1);
+  else post.reactions[emoji].push(currentUser.username);
+  saveDB(); renderSection('feed');
+}
+
+function submitComment(postId) {
+  const inp = document.getElementById('comment-input-' + postId);
+  if (!inp || !inp.value.trim()) return;
+  const post = db.feed.find(p => p.id === postId);
+  if (!post) return;
+  post.comments.push({
+    id: Date.now(),
+    author: currentUser.name,
+    username: currentUser.username,
+    text: inp.value.trim(),
+    time: new Date().toLocaleString('pt-BR'),
+    reactions: {}
+  });
+  saveDB(); renderSection('feed');
+}
+
+function reactComment(postId, commentId, emoji) {
+  const post = db.feed.find(p => p.id === postId);
+  if (!post) return;
+  const c = post.comments.find(c => c.id == commentId);
+  if (!c) return;
+  if (!c.reactions[emoji]) c.reactions[emoji] = [];
+  const idx = c.reactions[emoji].indexOf(currentUser.username);
+  if (idx >= 0) c.reactions[emoji].splice(idx, 1);
+  else c.reactions[emoji].push(currentUser.username);
+  saveDB(); renderSection('feed');
+}
+
+function deletePostAdmin(postId) {
+  if (!confirm('Apagar este post?')) return;
+  db.feed = db.feed.filter(p => p.id !== postId);
+  saveDB();
+  renderSection('admin');
+  showToast('✅ Post apagado!');
+}
+
+function deletePost(postId) {
+  if (!confirm('Apagar este post?')) return;
+  db.feed = db.feed.filter(p => p.id !== postId);
+  saveDB(); renderSection('feed');
+}
+
+function deleteComment(postId, commentId) {
+  const post = db.feed.find(p => p.id === postId);
+  if (!post) return;
+  post.comments = post.comments.filter(c => c.id != commentId);
+  saveDB(); renderSection('feed');
+}
+
+// ===================== SUBJECT =====================
+function renderSubject() {
+  if (!currentSubject) return '';
+  const subj = SUBJECTS[currentSubject];
+  const contents = db.contents[currentSubject] || [];
+  const completedList = (currentUser.role === 'student' && db.users[currentUser.username]?.completedContents) || [];
+  let html = `
+    <div class="subject-header">
+      <div class="subject-color-bar" style="background:${subj.color}"></div>
+      <div>
+        <div class="subject-title">${subj.icon} ${subj.name}</div>
+        <div class="subject-desc">Conteúdos, atividades e muito aprendizado!</div>
+      </div>
+      <button class="read-aloud-btn" onclick="readPageAloud()" title="Ler página em voz alta">🔊 Ler em voz alta</button>
+    </div>
+    <div class="nd-tip"><span class="icon">💡</span><span>Dica inclusiva: Você pode usar o botão 🔊 para ouvir o conteúdo. Tome o tempo que precisar!</span></div>
+  `;
+  if (contents.length === 0) {
+    html += `<div class="empty-state"><div class="icon">📭</div><p>Nenhum conteúdo adicionado ainda para ${subj.name}.</p></div>`;
+  } else {
+    contents.forEach((c, i) => {
+      const done = completedList.includes(c.id);
+      html += `
+        <div class="content-card" style="border-left-color:${subj.color}" id="content-${c.id}">
+          <div class="meta">📅 ${c.date} · 👨‍🏫 ${c.teacher}</div>
+          <h3>${subj.icon} ${c.title} ${done ? '✅' : ''}</h3>
+          <p>${c.body}</p>
+          ${c.link ? `<a href="${c.link}" target="_blank" rel="noopener" style="color:var(--blue);font-size:0.9rem;margin-top:8px;display:inline-block">🔗 Material de apoio</a>` : ''}
+          ${!done && currentUser.role === 'student' ? `
+            <div style="margin-top:14px">
+              <button class="btn btn-primary" onclick="markContentDone(${c.id}, '${currentSubject}', '${encodeURIComponent(c.title)}')">✅ Concluir e gerar atividade IA</button>
+            </div>` : ''}
+          ${done ? `<div id="activity-${c.id}"><button class="btn btn-outline" onclick="generateActivity(${c.id},'${currentSubject}','${encodeURIComponent(c.title)}')">🤖 Refazer atividade IA</button></div>` : ''}
+        </div>`;
+    });
+  }
+  return html;
+}
+
+function markContentDone(contentId, subj, titleEnc) {
+  if (currentUser.role !== 'student') return;
+  const user = db.users[currentUser.username];
+  if (!user.completedContents) user.completedContents = [];
+  if (!user.completedContents.includes(contentId)) {
+    user.completedContents.push(contentId);
+    addXP(50);
+    saveDB();
+  }
+  // Re-render subject and then generate activity
+  renderSection('subject');
+  setTimeout(() => generateActivity(contentId, subj, titleEnc), 200);
+}
+
+async function generateActivity(contentId, subj, titleEnc) {
+  const title = decodeURIComponent(titleEnc);
+  const container = document.getElementById('activity-' + contentId);
+  if (!container) return;
+  const subjName = SUBJECTS[subj]?.name || subj;
+  container.innerHTML = `
+    <div class="activity-card">
+      <div class="ai-loading"><div class="ai-spinner"></div><span>A IA está gerando uma atividade inclusiva para você...</span></div>
+    </div>`;
+  try {
+    const prompt = `Você é uma professora especialista em educação inclusiva para alunos neurodivergentes (TDAH, autismo, dislexia, etc).
+    
+Crie uma atividade educacional CURTA e MUITO INCLUSIVA sobre o conteúdo: "${title}" da matéria de ${subjName}.
+
+Regras obrigatórias:
+- Use linguagem clara, simples e direta
+- Inclua instruções passo a passo
+- Ofereça 3 perguntas de múltipla escolha com 4 alternativas cada
+- Cada pergunta deve ter uma dica visual (use emoji no início)
+- Indique qual é a resposta correta com [CORRETA] no final da alternativa
+- Seja encorajador e positivo
+- Responda APENAS em JSON no formato:
+{
+  "titulo": "...",
+  "introducao": "...",
+  "dica": "...",
+  "perguntas": [
+    {
+      "texto": "...",
+      "alternativas": ["A) ...", "B) ...", "C) ...[CORRETA]", "D) ..."],
+      "correta": 2
+    }
+  ]
+}`;
+    const raw = await callClaude([{ role: 'user', content: prompt }], 1000);
+    const act = JSON.parse(raw);
+    renderActivityInCard(container, act, contentId, subj);
+  } catch (e) {
+    container.innerHTML = `<div class="activity-card"><p>Não foi possível gerar a atividade agora. Tente novamente em instantes.</p></div>`;
+  }
+}
+
+function renderActivityInCard(container, act, contentId, subj) {
+  const questionsHtml = act.perguntas.map((q, qi) => `
+    <div class="ai-question" id="q-${contentId}-${qi}">
+      <div style="font-weight:700;margin-bottom:10px">${qi+1}. ${q.texto}</div>
+      ${q.alternativas.map((alt, ai) => {
+        const isCorrect = ai === q.correta;
+        const display = alt.replace('[CORRETA]', '').trim();
+        return `<div class="ai-option" id="opt-${contentId}-${qi}-${ai}" onclick="checkAnswer(${contentId},${qi},${ai},${isCorrect},'${subj}')">${display}</div>`;
+      }).join('')}
+      <div id="fb-${contentId}-${qi}" style="margin-top:8px;font-weight:700;display:none"></div>
+    </div>`).join('');
+  container.innerHTML = `
+    <div class="activity-card">
+      <h3>🤖 ${act.titulo}</h3>
+      <p>${act.introducao}</p>
+      <div class="nd-tip" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.4);margin-bottom:16px">
+        <span class="icon">💡</span><span>${act.dica}</span>
+      </div>
+      ${questionsHtml}
+      <div id="score-${contentId}" style="margin-top:16px;font-size:1.1rem;font-weight:700;display:none"></div>
+    </div>`;
+  window._activityState = window._activityState || {};
+  window._activityState[contentId] = { total: act.perguntas.length, correct: 0, answered: 0, subj };
+}
+
+function checkAnswer(contentId, qi, ai, isCorrect, subj) {
+  const opts = document.querySelectorAll(`[id^="opt-${contentId}-${qi}-"]`);
+  opts.forEach(el => el.onclick = null);
+  opts.forEach((el, i) => {
+    if (i === ai) el.classList.add(isCorrect ? 'correct' : 'wrong');
+  });
+  const fb = document.getElementById(`fb-${contentId}-${qi}`);
+  if (fb) {
+    fb.style.display = '';
+    fb.textContent = isCorrect ? '✅ Correto! Muito bem!' : '❌ Não foi dessa vez. Continue tentando!';
+    fb.style.color = isCorrect ? '#a7f3d0' : '#fca5a5';
+  }
+  const state = window._activityState && window._activityState[contentId];
+  if (state) {
+    if (isCorrect) state.correct++;
+    state.answered++;
+    if (state.answered === state.total) {
+      const scoreEl = document.getElementById('score-' + contentId);
+      if (scoreEl) {
+        scoreEl.style.display = '';
+        const pct = Math.round((state.correct / state.total) * 100);
+        scoreEl.textContent = `🏆 Resultado: ${state.correct}/${state.total} (${pct}%)`;
+        if (currentUser.role === 'student') addXP(state.correct * 20);
+      }
+    }
+  }
+}
+
+// ===================== JOGOS =====================
+function renderGames() {
+  const level = currentUser.role === 'student' ? getLevel(currentUser.xp || 0) : 99;
+  return `
+    <div class="section-title">🎮 Jogos Educativos</div>
+    <div class="nd-tip"><span class="icon">🎯</span><span>Os jogos desbloqueiam conforme você sobe de nível! Continue estudando para desbloquear mais!</span></div>
+    ${GAMES.map(g => {
+      const locked = level < g.minLevel;
+      return `<div class="game-card ${locked ? 'locked' : ''}">
+        <div class="game-icon">${locked ? '🔒' : g.icon}</div>
+        <div class="game-info">
+          <h3>${g.name} ${locked ? `<span class="chip">🔒 Nível ${g.minLevel}</span>` : ''}</h3>
+          <p>${g.desc}</p>
+        </div>
+        ${!locked ? `<button class="btn btn-primary" onclick="playGame(${g.id})">Jogar</button>` : `<span style="color:var(--gray-dark);font-size:0.85rem">Alcance o nível ${g.minLevel}</span>`}
+      </div>`;
+    }).join('')}`;
+}
+
+function playGame(id) {
+  const game = GAMES.find(g => g.id === id);
+  openModal(`
+    <h2>${game.icon} ${game.name}</h2>
+    <div id="game-area"></div>
+  `);
+  loadGame(id);
+}
+
+async function loadGame(id) {
+  const area = document.getElementById('game-area');
+  if (!area) return;
+  if (id === 1) {
+    area.innerHTML = `<div class="ai-loading"><div class="ai-spinner" style="border-color:rgba(19,64,166,0.2);border-top-color:var(--blue)"></div><span>Gerando quiz...</span></div>`;
+    try {
+      const raw = await callClaude([{role:'user',content:'Crie 3 perguntas de quiz educacional variadas para alunos do ensino fundamental. Responda APENAS em JSON: {"perguntas":[{"texto":"...","alternativas":["A)...","B)...","C)...","D)..."],"correta":0}]}'}], 800);
+      const quiz = JSON.parse(raw);
+      let score = 0, answered = 0;
+      area.innerHTML = `
+        <div id="quiz-questions">
+          ${quiz.perguntas.map((q,qi)=>`
+            <div style="margin-bottom:20px">
+              <div style="font-weight:700;margin-bottom:10px">${qi+1}. ${q.texto}</div>
+              ${q.alternativas.map((alt,ai)=>`<div class="ai-option" id="gopt-${qi}-${ai}" onclick="checkGameAnswer(${qi},${ai},${ai===q.correta})" style="color:white">${alt}</div>`).join('')}
+              <div id="gfb-${qi}" style="margin-top:8px;font-weight:700;display:none"></div>
+            </div>`).join('')}
+        </div>
+        <div id="game-score" style="display:none;text-align:center;padding:16px;font-size:1.2rem;font-weight:800"></div>`;
+      window._gameState = { total: quiz.perguntas.length, correct: 0, answered: 0 };
+    } catch(e) { area.innerHTML = '<p>Erro ao carregar o quiz. Tente novamente.</p>'; }
+  } else {
+    area.innerHTML = `<p style="color:var(--gray-dark);text-align:center;padding:24px">Este jogo estará disponível em breve! 🚀</p>`;
+  }
+}
+
+function checkGameAnswer(qi, ai, isCorrect) {
+  const opts = document.querySelectorAll(`[id^="gopt-${qi}-"]`);
+  opts.forEach(el => el.onclick = null);
+  opts.forEach((el, i) => { if (i === ai) el.classList.add(isCorrect ? 'correct' : 'wrong'); });
+  const fb = document.getElementById('gfb-' + qi);
+  if (fb) { fb.style.display = ''; fb.textContent = isCorrect ? '✅ Correto!' : '❌ Errado!'; fb.style.color = isCorrect ? '#166534' : '#991b1b'; }
+  if (window._gameState) {
+    if (isCorrect) window._gameState.correct++;
+    window._gameState.answered++;
+    if (window._gameState.answered === window._gameState.total) {
+      const sc = document.getElementById('game-score');
+      if (sc) {
+        sc.style.display = '';
+        sc.textContent = `🏆 ${window._gameState.correct}/${window._gameState.total} acertos!`;
+        if (currentUser.role === 'student') addXP(window._gameState.correct * 15);
+      }
+    }
+  }
+}
+
+// ===================== AVALIAÇÕES =====================
+function renderAvaliacoes() {
+  const now = new Date();
+  let allEvals = [];
+  Object.entries(db.evals).forEach(([subj, evals]) => {
+    evals.forEach(e => allEvals.push({ ...e, subj }));
+  });
+  const myAnswers = (currentUser.role === 'student' && db.evalAnswers[currentUser.username]) || {};
+  const available = allEvals.filter(e => {
+    const start = new Date(e.startDate); const end = new Date(e.endDate);
+    return now >= start && now <= end;
+  });
+  const upcoming = allEvals.filter(e => new Date(e.startDate) > now);
+  const closed = allEvals.filter(e => new Date(e.endDate) < now);
+  return `
+    <div class="section-title">📝 Avaliações</div>
+    <div class="nd-tip"><span class="icon">📋</span><span>As avaliações ficam disponíveis apenas nas datas programadas pelos professores. Você pode ver as próximas aqui!</span></div>
+    ${available.length > 0 ? `<div class="section-title" style="font-size:1rem;margin-bottom:10px;color:var(--red)">🟢 Disponíveis agora</div>
+    ${available.map(e => renderEvalCard(e, myAnswers, 'available')).join('')}` : ''}
+    ${upcoming.length > 0 ? `<div class="section-title" style="font-size:1rem;margin-bottom:10px">⏰ Em breve</div>
+    ${upcoming.map(e => renderEvalCard(e, myAnswers, 'upcoming')).join('')}` : ''}
+    ${closed.length > 0 ? `<div class="section-title" style="font-size:1rem;margin-bottom:10px">🔴 Encerradas</div>
+    ${closed.map(e => renderEvalCard(e, myAnswers, 'closed')).join('')}` : ''}
+    ${allEvals.length === 0 ? `<div class="empty-state"><div class="icon">📭</div><p>Nenhuma avaliação cadastrada ainda.</p></div>` : ''}`;
+}
+
+function renderEvalCard(e, myAnswers, status) {
+  const subj = SUBJECTS[e.subj];
+  const done = myAnswers[e.id];
+  const canAnswer = status === 'available' && currentUser.role === 'student' && !done;
+  return `
+    <div class="eval-card">
+      <span class="chip" style="background:${subj?.color||'#ccc'};color:white;margin-bottom:8px">${subj?.icon || ''} ${subj?.name || e.subj}</span>
+      <h3>${e.title}</h3>
+      <span class="eval-badge ${status === 'available' ? 'badge-available' : status === 'upcoming' ? 'badge-upcoming' : 'badge-closed'}">
+        ${status === 'available' ? '✅ Disponível' : status === 'upcoming' ? `⏰ Abre em ${new Date(e.startDate).toLocaleDateString('pt-BR')}` : '🔴 Encerrada'}
+      </span>
+      <p style="font-size:0.9rem;color:var(--gray-dark);margin:8px 0">${e.desc}</p>
+      <p style="font-size:0.82rem;color:var(--gray-dark)">📅 ${new Date(e.startDate).toLocaleDateString('pt-BR')} → ${new Date(e.endDate).toLocaleDateString('pt-BR')}</p>
+      ${done ? '<div style="color:#166534;font-weight:700;margin-top:8px">✅ Você já respondeu esta avaliação!</div>' : ''}
+      ${canAnswer ? `<button class="btn btn-red" style="margin-top:12px" onclick="openEval('${e.id}','${e.subj}')">📝 Responder avaliação</button>` : ''}
+    </div>`;
+}
+
+function openEval(evalId, subj) {
+  const e = (db.evals[subj] || []).find(ev => ev.id === evalId);
+  if (!e) return;
+  openModal(`
+    <h2>📝 ${e.title}</h2>
+    <p style="color:var(--gray-dark);margin-bottom:20px">${e.desc}</p>
+    <div id="eval-form">
+      ${e.questions.map((q,i) => `
+        <div class="form-group">
+          <label>${i+1}. ${q.text}</label>
+          ${q.type === 'multiple' ? q.options.map((o,oi) => `
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <input type="radio" name="q${i}" id="q${i}o${oi}" value="${oi}">
+              <label for="q${i}o${oi}">${o}</label>
+            </div>`).join('') : `<textarea rows="3" id="q${i}-text" placeholder="Sua resposta..." style="width:100%;padding:10px;border:2px solid var(--gray);border-radius:8px"></textarea>`}
+        </div>`).join('')}
+      <button class="btn btn-red" onclick="submitEval('${evalId}','${subj}',${e.questions.length})">📤 Enviar avaliação</button>
+    </div>`);
+}
+
+function submitEval(evalId, subj, questionCount) {
+  const answers = [];
+  for (let i = 0; i < questionCount; i++) {
+    const radio = document.querySelector(`input[name="q${i}"]:checked`);
+    const text = document.getElementById(`q${i}-text`);
+    answers.push(radio ? radio.value : (text ? text.value : ''));
+  }
+  if (!db.evalAnswers[currentUser.username]) db.evalAnswers[currentUser.username] = {};
+  db.evalAnswers[currentUser.username][evalId] = { answers, time: new Date().toLocaleString('pt-BR') };
+  saveDB();
+  addXP(100);
+  closeModal();
+  renderSection('avaliacoes');
+  showToast('✅ Avaliação enviada! +100 XP!');
+}
+
+// ===================== EXERCÍCIOS =====================
+function renderExercicios() {
+  const level = currentUser.role === 'student' ? getLevel(currentUser.xp || 0) : 99;
+  const unlockedExtras = Object.entries(EXTRA_SUBJECTS).filter(([minLv]) => level >= parseInt(minLv));
+  return `
+    <div class="section-title">📚 Exercícios Extras</div>
+    <div class="nd-tip"><span class="icon">🚀</span><span>A cada 5 níveis você desbloqueia matérias extracurriculares com exercícios gerados por IA! Seu nível atual: <strong>${level}</strong></span></div>
+    <div style="background:white;border-radius:var(--radius);padding:20px 24px;box-shadow:var(--shadow);margin-bottom:20px">
+      <div style="font-weight:700;margin-bottom:8px">Seu progresso</div>
+      <div class="xp-bar-wrap"><div class="xp-bar" style="width:${getLevelProgress(currentUser.xp||0)}%"></div></div>
+      <div class="level-info"><span>Nível ${level}</span><span>${currentUser.xp||0} / ${getXPForNextLevel(currentUser.xp||0)} XP</span></div>
+    </div>
+    ${Object.entries(EXTRA_SUBJECTS).map(([minLv, extra]) => {
+      const locked = level < parseInt(minLv);
+      return `<div class="game-card ${locked ? 'locked' : ''}">
+        <div class="game-icon">${locked ? '🔒' : extra.icon}</div>
+        <div class="game-info">
+          <h3>${extra.name} ${locked ? `<span class="chip">🔒 Nível ${minLv}</span>` : '<span class="chip" style="background:#dcfce7;color:#166534">✅ Desbloqueado</span>'}</h3>
+          <p>${extra.desc}</p>
+        </div>
+        ${!locked ? `<button class="btn btn-primary" onclick="openExtraExercise('${extra.name}','${extra.icon}')">Praticar</button>` : ''}
+      </div>`;
+    }).join('')}`;
+}
+
+async function openExtraExercise(name, icon) {
+  openModal(`<h2>${icon} ${name}</h2><div id="extra-ex-area"><div class="ai-loading"><div class="ai-spinner" style="border-color:rgba(19,64,166,0.2);border-top-color:var(--blue)"></div><span>Gerando exercícios com IA...</span></div></div>`);
+  const area = document.getElementById('extra-ex-area');
+  try {
+    const raw = await callClaude([{role:'user',content:`Crie 3 exercícios extracurriculares sobre "${name}" para alunos do ensino fundamental, de forma muito inclusiva e acessível para neurodivergentes. Use linguagem simples, emojis e seja encorajador. Responda APENAS em JSON: {"exercicios":[{"pergunta":"...","dica":"...","resposta":"..."}]}`}], 900);
+    const result = JSON.parse(raw);
+    area.innerHTML = result.exercicios.map((ex,i) => `
+      <div style="background:var(--gray-light);border-radius:12px;padding:18px 20px;margin-bottom:14px">
+        <div style="font-weight:700;margin-bottom:8px">${i+1}. ${ex.pergunta}</div>
+        <div style="color:var(--gray-dark);font-size:0.9rem;margin-bottom:10px">💡 Dica: ${ex.dica}</div>
+        <textarea rows="3" id="ex-resp-${i}" placeholder="Sua resposta aqui..." style="width:100%;padding:10px;border:2px solid var(--gray);border-radius:8px;font-family:inherit"></textarea>
+        <button class="btn btn-gray" style="margin-top:8px" onclick="revealAnswer('${btoa(encodeURIComponent(ex.resposta))}','answer-${i}')">👁️ Ver resposta</button>
+        <div id="answer-${i}" style="display:none;margin-top:8px;padding:10px;background:#dcfce7;border-radius:8px;color:#166534;font-weight:600"></div>
+      </div>`).join('') + `<button class="btn btn-primary" onclick="submitExtraExercises(${result.exercicios.length})">✅ Concluir (+${result.exercicios.length*30} XP)</button>`;
+  } catch(e) { area.innerHTML = '<p>Erro ao gerar exercícios. Tente novamente.</p>'; }
+}
+
+function revealAnswer(b64, divId) {
+  const div = document.getElementById(divId);
+  if (div) { div.style.display = ''; div.textContent = '✅ ' + decodeURIComponent(atob(b64)); }
+}
+
+function submitExtraExercises(count) {
+  addXP(count * 30);
+  closeModal();
+  showToast(`🎉 Exercícios concluídos! +${count*30} XP!`);
+}
+
+// ===================== RANKING =====================
+function renderRanking() {
+  const students = Object.entries(db.users).map(([u, d]) => ({
+    username: u, name: d.name, xp: d.xp || 0, level: getLevel(d.xp || 0)
+  })).sort((a, b) => b.xp - a.xp);
+  const medals = ['🥇', '🥈', '🥉'];
+  const posClasses = ['gold', 'silver', 'bronze'];
+  return `
+    <div class="section-title">🏆 Ranking de Alunos</div>
+    <div class="ranking-card">
+      ${students.length === 0 ? '<p style="text-align:center;color:var(--gray-dark);padding:24px">Nenhum aluno cadastrado ainda.</p>' :
+      students.map((s, i) => `
+        <div class="rank-item">
+          <div class="rank-pos ${posClasses[i] || ''}">${medals[i] || (i+1)+'º'}</div>
+          <div class="post-avatar">${s.name[0]}</div>
+          <div class="rank-name">${s.name} ${s.username === currentUser.username ? '(você)' : ''}</div>
+          <div class="rank-level">Nv ${s.level}</div>
+          <div class="rank-xp">⭐ ${s.xp} XP</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ===================== PROFESSOR PANEL =====================
+function renderProfPanel() {
+  if (currentUser.role !== 'teacher' && currentUser.role !== 'admin') return '<p>Acesso negado.</p>';
+  const mySubj = currentUser.subj;
+  const subjects = mySubj === 'all' ? Object.keys(SUBJECTS) : [mySubj];
+  return `
+    <div class="section-title">👨‍🏫 Painel do Professor</div>
+    ${subjects.map(subj => {
+      const s = SUBJECTS[subj];
+      return `
+        <div class="panel-section">
+          <h2>${s.icon} ${s.name}</h2>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+            <button class="btn btn-primary" onclick="openAddContent('${subj}')">➕ Adicionar Conteúdo</button>
+            <button class="btn btn-red" onclick="openAddEval('${subj}')">📝 Adicionar Avaliação</button>
+          </div>
+          <div>
+            <strong>Conteúdos (${(db.contents[subj]||[]).length})</strong>
+            ${(db.contents[subj]||[]).length > 0 ? `<div class="table-wrap"><table>
+              <tr><th>Título</th><th>Data</th><th>Ações</th></tr>
+              ${(db.contents[subj]||[]).map(c => `<tr><td>${c.title}</td><td>${c.date}</td><td><button class="btn btn-gray" onclick="deleteContent('${subj}','${c.id}')">🗑️</button></td></tr>`).join('')}
+            </table></div>` : '<p style="color:var(--gray-dark);font-size:0.9rem;margin-top:8px">Nenhum conteúdo ainda.</p>'}
+          </div>
+          <div style="margin-top:18px">
+            <strong>Avaliações (${(db.evals[subj]||[]).length})</strong>
+            ${(db.evals[subj]||[]).length > 0 ? `<div class="table-wrap"><table>
+              <tr><th>Título</th><th>Início</th><th>Fim</th><th>Ações</th></tr>
+              ${(db.evals[subj]||[]).map(e => `<tr><td>${e.title}</td><td>${new Date(e.startDate).toLocaleDateString('pt-BR')}</td><td>${new Date(e.endDate).toLocaleDateString('pt-BR')}</td>
+              <td style="display:flex;gap:5px">
+                <button class="btn btn-gray" onclick="editEvalDates('${subj}','${e.id}')">📅</button>
+                <button class="btn btn-gray" onclick="deleteEval('${subj}','${e.id}')">🗑️</button>
+              </td></tr>`).join('')}
+            </table></div>` : '<p style="color:var(--gray-dark);font-size:0.9rem;margin-top:8px">Nenhuma avaliação ainda.</p>'}
+          </div>
+        </div>`;
+    }).join('')}`;
+}
+
+function openAddContent(subj) {
+  openModal(`
+    <h2>➕ Adicionar Conteúdo — ${SUBJECTS[subj].name}</h2>
+    <div class="success-msg" id="add-content-success">Conteúdo adicionado com sucesso!</div>
+    <div class="form-group"><label>Título da aula</label><input type="text" id="ct-title" placeholder="Ex: Verbos no Presente"></div>
+    <div class="form-group"><label>Conteúdo / Explicação</label><textarea id="ct-body" rows="5" placeholder="Explique o conteúdo da aula aqui..."></textarea></div>
+    <div class="form-group"><label>Link de material (opcional)</label><input type="url" id="ct-link" placeholder="https://..."></div>
+    <button class="btn btn-primary" onclick="submitContent('${subj}')">✅ Salvar conteúdo</button>`);
+}
+
+function submitContent(subj) {
+  const title = document.getElementById('ct-title').value.trim();
+  const body = document.getElementById('ct-body').value.trim();
+  const link = document.getElementById('ct-link').value.trim();
+  if (!title || !body) { alert('Preencha título e conteúdo.'); return; }
+  if (!db.contents[subj]) db.contents[subj] = [];
+  db.contents[subj].push({
+    id: db.nextContentId++,
+    title, body, link,
+    teacher: currentUser.name,
+    date: new Date().toLocaleDateString('pt-BR')
+  });
+  saveDB();
+  const s = document.getElementById('add-content-success');
+  if (s) s.style.display = 'block';
+  document.getElementById('ct-title').value = '';
+  document.getElementById('ct-body').value = '';
+  document.getElementById('ct-link').value = '';
+}
+
+function deleteContent(subj, id) {
+  if (!confirm('Apagar este conteúdo?')) return;
+  db.contents[subj] = (db.contents[subj] || []).filter(c => String(c.id) !== String(id));
+  saveDB();
+  const overlay = document.getElementById('modal-overlay');
+  if (overlay) overlay.style.display = 'none';
+  const section = currentUser.role === 'admin' ? 'admin' : 'professor';
+  renderSection(section);
+  showToast('✅ Conteúdo apagado!');
+}
+
+function openAddEval(subj) {
+  openModal(`
+    <h2>📝 Adicionar Avaliação — ${SUBJECTS[subj].name}</h2>
+    <div class="success-msg" id="add-eval-success">Avaliação criada com sucesso!</div>
+    <div class="form-group"><label>Título da avaliação</label><input type="text" id="ev-title" placeholder="Ex: Prova de Frações"></div>
+    <div class="form-group"><label>Descrição</label><textarea id="ev-desc" rows="2" placeholder="Orientações para os alunos..."></textarea></div>
+    <div class="form-group"><label>Data de início</label><input type="datetime-local" id="ev-start"></div>
+    <div class="form-group"><label>Data de término</label><input type="datetime-local" id="ev-end"></div>
+    <div id="eval-questions">
+      <div class="form-group" id="q-block-0">
+        <label>Pergunta 1</label>
+        <input type="text" id="eq-text-0" placeholder="Texto da pergunta" style="margin-bottom:8px">
+        <select id="eq-type-0">
+          <option value="multiple">Múltipla escolha</option>
+          <option value="open">Aberta</option>
+        </select>
+        <div id="eq-opts-0" style="margin-top:8px">
+          ${[0,1,2,3].map(oi=>`<input type="text" id="eq-opt-0-${oi}" placeholder="Opção ${String.fromCharCode(65+oi)}" style="margin-bottom:6px;width:100%;padding:8px;border:2px solid var(--gray);border-radius:8px">`).join('')}
+          <input type="number" id="eq-correct-0" placeholder="Índice da correta (0-3)" min="0" max="3" style="width:100%;padding:8px;border:2px solid var(--gray);border-radius:8px;margin-top:4px">
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-outline" onclick="addEvalQuestion()" style="margin-bottom:14px">+ Adicionar pergunta</button><br>
+    <button class="btn btn-red" onclick="submitEvalForm('${subj}')">✅ Criar avaliação</button>`, true);
+  let qCount = 1;
+  window.addEvalQuestion = () => {
+    const i = qCount++;
+    const container = document.getElementById('eval-questions');
+    const div = document.createElement('div');
+    div.className = 'form-group'; div.id = `q-block-${i}`;
+    div.innerHTML = `<label>Pergunta ${i+1}</label>
+      <input type="text" id="eq-text-${i}" placeholder="Texto da pergunta" style="margin-bottom:8px">
+      <select id="eq-type-${i}"><option value="multiple">Múltipla escolha</option><option value="open">Aberta</option></select>
+      <div id="eq-opts-${i}" style="margin-top:8px">
+        ${[0,1,2,3].map(oi=>`<input type="text" id="eq-opt-${i}-${oi}" placeholder="Opção ${String.fromCharCode(65+oi)}" style="margin-bottom:6px;width:100%;padding:8px;border:2px solid var(--gray);border-radius:8px">`).join('')}
+        <input type="number" id="eq-correct-${i}" placeholder="Índice da correta (0-3)" min="0" max="3" style="width:100%;padding:8px;border:2px solid var(--gray);border-radius:8px;margin-top:4px">
+      </div>`;
+    container.appendChild(div);
+  };
+}
+
+function submitEvalForm(subj) {
+  const title = document.getElementById('ev-title').value.trim();
+  const desc = document.getElementById('ev-desc').value.trim();
+  const start = document.getElementById('ev-start').value;
+  const end = document.getElementById('ev-end').value;
+  if (!title || !start || !end) { alert('Preencha todos os campos obrigatórios.'); return; }
+  const questions = [];
+  let i = 0;
+  while (document.getElementById(`eq-text-${i}`)) {
+    const text = document.getElementById(`eq-text-${i}`).value.trim();
+    const type = document.getElementById(`eq-type-${i}`).value;
+    if (text) {
+      const q = { text, type };
+      if (type === 'multiple') {
+        q.options = [0,1,2,3].map(oi => document.getElementById(`eq-opt-${i}-${oi}`).value.trim());
+        q.correct = parseInt(document.getElementById(`eq-correct-${i}`).value) || 0;
+      }
+      questions.push(q);
+    }
+    i++;
+  }
+  if (questions.length === 0) { alert('Adicione pelo menos uma pergunta.'); return; }
+  if (!db.evals[subj]) db.evals[subj] = [];
+  db.evals[subj].push({ id: 'eval_' + Date.now(), title, desc, startDate: start, endDate: end, questions, teacher: currentUser.name });
+  saveDB();
+  const s = document.getElementById('add-eval-success');
+  if (s) s.style.display = 'block';
+}
+
+function deleteEval(subj, id) {
+  if (!confirm('Apagar esta avaliação?')) return;
+  db.evals[subj] = (db.evals[subj] || []).filter(e => e.id !== id);
+  saveDB();
+  document.getElementById('modal-overlay').style.display = 'none';
+  const section = currentUser.role === 'admin' ? 'admin' : 'professor';
+  renderSection(section);
+  showToast('✅ Avaliação apagada!');
+}
+
+function editEvalDates(subj, evalId) {
+  const e = (db.evals[subj] || []).find(ev => ev.id === evalId);
+  if (!e) return;
+  openModal(`
+    <h2>📅 Editar Datas — ${e.title}</h2>
+    <div class="form-group"><label>Nova data de início</label><input type="datetime-local" id="edit-start" value="${e.startDate}"></div>
+    <div class="form-group"><label>Nova data de término</label><input type="datetime-local" id="edit-end" value="${e.endDate}"></div>
+    <button class="btn btn-primary" onclick="saveEvalDates('${subj}','${evalId}')">💾 Salvar</button>`);
+}
+
+function saveEvalDates(subj, evalId) {
+  const e = (db.evals[subj] || []).find(ev => ev.id === evalId);
+  if (!e) return;
+  e.startDate = document.getElementById('edit-start').value;
+  e.endDate = document.getElementById('edit-end').value;
+  saveDB();
+  document.getElementById('modal-overlay').style.display = 'none';
+  const section = currentUser.role === 'admin' ? 'admin' : 'professor';
+  renderSection(section);
+  showToast('✅ Datas atualizadas!');
+}
+
+// ===================== CADASTRAR ALUNO =====================
+function renderCadastrarAluno() {
+  if (currentUser.role !== 'teacher' && currentUser.role !== 'admin') return '<p>Acesso negado.</p>';
+  const recentStudents = Object.entries(db.users).slice(-5).reverse();
+  return `
+    <div class="section-title">➕ Cadastrar Conta de Aluno</div>
+    <div class="nd-tip"><span class="icon">👤</span><span>Crie contas para seus alunos. Eles poderão fazer login com o usuário e senha definidos aqui.</span></div>
+    <div class="panel-section">
+      <h2>📋 Novo Cadastro</h2>
+      <div id="cad-success" class="success-msg">✅ Conta criada com sucesso! O aluno já pode fazer login.</div>
+      <div id="cad-error" style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-weight:600;display:none"></div>
+      <div class="form-group">
+        <label>Nome completo do aluno</label>
+        <input type="text" id="cad-name" placeholder="Ex: João da Silva">
+      </div>
+      <div class="form-group">
+        <label>Nome de usuário (para login)</label>
+        <input type="text" id="cad-user" placeholder="Ex: joao.silva" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Senha inicial</label>
+        <input type="text" id="cad-pass" placeholder="Ex: senha123" autocomplete="off">
+      </div>
+      <button class="btn btn-primary" onclick="cadastrarAluno()" style="margin-top:4px">✅ Criar conta de aluno</button>
+    </div>
+    ${recentStudents.length > 0 ? `
+    <div class="panel-section">
+      <h2>👥 Alunos Cadastrados Recentemente</h2>
+      <div class="table-wrap"><table>
+        <tr><th>Usuário</th><th>Nome</th><th>XP</th><th>Nível</th></tr>
+        ${recentStudents.map(([u,d]) => `
+          <tr>
+            <td><code style="background:var(--gray-light);padding:2px 8px;border-radius:6px;font-size:0.9rem">${u}</code></td>
+            <td>${d.name}</td>
+            <td>⭐ ${d.xp||0}</td>
+            <td><span class="rank-level">Nv ${getLevel(d.xp||0)}</span></td>
+          </tr>`).join('')}
+      </table></div>
+      <p style="color:var(--gray-dark);font-size:0.85rem;margin-top:10px">Mostrando os 5 últimos. Veja todos no painel do administrador.</p>
+    </div>` : ''}`;
+}
+
+function cadastrarAluno() {
+  const name = document.getElementById('cad-name').value.trim();
+  const u = document.getElementById('cad-user').value.trim().toLowerCase().replace(/\s+/g,'');
+  const p = document.getElementById('cad-pass').value.trim();
+  const errEl = document.getElementById('cad-error');
+  const sucEl = document.getElementById('cad-success');
+  errEl.style.display = 'none';
+  sucEl.style.display = 'none';
+  if (!name || !u || !p) {
+    errEl.textContent = '⚠️ Preencha todos os campos.';
+    errEl.style.display = 'block'; return;
+  }
+  if (TEACHERS[u] || db.users[u]) {
+    errEl.textContent = '⚠️ Este nome de usuário já existe. Escolha outro.';
+    errEl.style.display = 'block'; return;
+  }
+  db.users[u] = { name, pass: p, xp: 0, completedContents: [] };
+  saveDB();
+  sucEl.style.display = 'block';
+  document.getElementById('cad-name').value = '';
+  document.getElementById('cad-user').value = '';
+  document.getElementById('cad-pass').value = '';
+  setTimeout(() => renderSection('cadastrar'), 1800);
+}
+
+// ===================== ADMIN PANEL =====================
+function renderAdminPanel() {
+  if (currentUser.role !== 'admin') return '<p>Acesso negado.</p>';
+  const students = Object.entries(db.users);
+  let totalPosts = db.feed.length;
+  let totalEvals = Object.values(db.evals).reduce((a,b) => a + b.length, 0);
+  let totalContents = Object.values(db.contents).reduce((a,b) => a + b.length, 0);
+  return `
+    <div class="section-title">⚙️ Painel Administrativo</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px">
+      ${[['👥','Alunos',students.length],['📝','Posts',totalPosts],['📋','Avaliações',totalEvals],['📚','Conteúdos',totalContents]].map(([ic,lb,v])=>`
+        <div style="background:white;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);text-align:center">
+          <div style="font-size:2rem">${ic}</div>
+          <div style="font-size:1.6rem;font-weight:900;color:var(--blue)">${v}</div>
+          <div style="color:var(--gray-dark);font-size:0.9rem">${lb}</div>
+        </div>`).join('')}
+    </div>
+    <div class="panel-section">
+      <h2>👥 Gerenciar Alunos</h2>
+      ${students.length === 0 ? '<p style="color:var(--gray-dark)">Nenhum aluno cadastrado.</p>' : `
+      <div class="table-wrap"><table>
+        <tr><th>Usuário</th><th>Nome</th><th>XP</th><th>Nível</th><th>Progresso</th><th>Ações</th></tr>
+        ${students.map(([u,d]) => {
+          const lv = getLevel(d.xp||0);
+          const prog = getLevelProgress(d.xp||0);
+          return `<tr>
+            <td>${u}</td><td>${d.name}</td><td>⭐ ${d.xp||0}</td>
+            <td><span class="rank-level">Nv ${lv}</span></td>
+            <td><div style="width:100px"><div class="xp-bar-wrap" style="height:7px"><div class="xp-bar" style="width:${prog}%"></div></div><div style="font-size:0.75rem;color:var(--gray-dark)">${prog}%</div></div></td>
+            <td><button class="btn btn-gray" onclick="deleteUser('${u}')">🗑️ Apagar</button></td>
+          </tr>`;
+        }).join('')}
+      </table></div>`}
+    </div>
+    <div class="panel-section">
+      <h2>📋 Gerenciar Posts do Feed</h2>
+      ${db.feed.length === 0 ? '<p style="color:var(--gray-dark)">Nenhum post.</p>' : `
+      <div class="table-wrap"><table>
+        <tr><th>Autor</th><th>Texto</th><th>Data</th><th>Ação</th></tr>
+        ${db.feed.map(p => `<tr><td>${p.author}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.text||'(mídia)'}</td><td>${p.time}</td><td><button class="btn btn-gray" onclick="deletePostAdmin(${p.id})">🗑️</button></td></tr>`).join('')}
+      </table></div>`}
+    </div>
+    <div class="panel-section">
+      <h2>📝 Gerenciar Avaliações</h2>
+      ${Object.entries(db.evals).flatMap(([subj, evals]) => evals.map(e => ({...e, subj}))).length === 0 ? '<p style="color:var(--gray-dark)">Nenhuma avaliação.</p>' : `
+      <div class="table-wrap"><table>
+        <tr><th>Matéria</th><th>Título</th><th>Início</th><th>Fim</th><th>Ações</th></tr>
+        ${Object.entries(db.evals).flatMap(([subj, evals]) => evals.map(e => `
+          <tr><td>${SUBJECTS[subj]?.name||subj}</td><td>${e.title}</td>
+          <td>${new Date(e.startDate).toLocaleDateString('pt-BR')}</td>
+          <td>${new Date(e.endDate).toLocaleDateString('pt-BR')}</td>
+          <td style="display:flex;gap:5px">
+            <button class="btn btn-gray" onclick="editEvalDates('${subj}','${e.id}')">📅</button>
+            <button class="btn btn-gray" onclick="deleteEval('${subj}','${e.id}')">🗑️</button>
+          </td></tr>`)).join('')}
+      </table></div>`}
+    </div>
+    <div class="panel-section">
+      <h2>📚 Gerenciar Conteúdos</h2>
+      ${Object.entries(db.contents).flatMap(([subj, conts]) => conts.map(c => ({...c, subj}))).length === 0 ? '<p style="color:var(--gray-dark)">Nenhum conteúdo cadastrado.</p>' : `
+      <div class="table-wrap"><table>
+        <tr><th>Matéria</th><th>Título</th><th>Professor</th><th>Data</th><th>Ação</th></tr>
+        ${Object.entries(db.contents).flatMap(([subj, conts]) => conts.map(c => `
+          <tr>
+            <td><span style="display:inline-flex;align-items:center;gap:5px">${SUBJECTS[subj]?.icon||''} ${SUBJECTS[subj]?.name||subj}</span></td>
+            <td>${c.title}</td>
+            <td>${c.teacher||'-'}</td>
+            <td>${c.date||'-'}</td>
+            <td><button class="btn btn-gray" onclick="deleteContent('${subj}','${c.id}')">🗑️ Apagar</button></td>
+          </tr>`)).join('')}
+      </table></div>`}
+    </div>`;
+}
+
+function deleteUser(username) {
+  if (!confirm(`Apagar a conta de "${username}"?`)) return;
+  delete db.users[username];
+  if (db.evalAnswers[username]) delete db.evalAnswers[username];
+  saveDB();
+  renderSection('admin');
+  showToast('✅ Conta apagada com sucesso.');
+}
+
+// ===================== MODAL =====================
+function openModal(html, wide) {
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-overlay').style.display = 'flex';
+  if (wide) document.getElementById('modal-box').style.maxWidth = '680px';
+  else document.getElementById('modal-box').style.maxWidth = '520px';
+}
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').style.display = 'none';
+}
+
+// ===================== UTILS =====================
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  Object.assign(t.style, {
+    position:'fixed', bottom:'24px', right:'24px', background:'var(--blue)', color:'white',
+    padding:'14px 22px', borderRadius:'12px', fontWeight:'700', fontSize:'0.98rem',
+    boxShadow:'0 4px 18px rgba(0,0,0,0.18)', zIndex:'9999', maxWidth:'340px',
+    transition:'opacity 0.4s', opacity:'1'
+  });
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3000);
+}
+
+function readPageAloud() {
+  const text = document.getElementById('main-content').innerText.slice(0, 1000);
+  if (!window.speechSynthesis) { alert('Seu navegador não suporta leitura em voz alta.'); return; }
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'pt-BR'; utt.rate = 0.85;
+  window.speechSynthesis.speak(utt);
+}
+
+// Keyboard enter on auth
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('login-form').style.display !== 'none') doLogin();
+  }
+});
+
+// ===================== INIT =====================
+showLogin();
+</script>
+</body>
+</html>
