@@ -413,6 +413,7 @@
     <div class="nav-right">
       <div class="user-badge" id="nav-username">👤 Usuário</div>
       <div class="xp-badge" id="nav-xp">⭐ 0 XP | Nv 1</div>
+      <button class="logout-btn" id="api-key-btn" onclick="openApiKeyConfig()" title="Configurar chave da IA" style="display:none">🔑 IA</button>
       <button class="logout-btn" onclick="doLogout()">Sair</button>
     </div>
   </nav>
@@ -468,29 +469,110 @@
 </div>
 
 <script>
-// ===================== CONFIGURAÇÃO DA IA =====================
-// ⚠️ Coloque sua chave da API da Anthropic aqui:
+// ===================== BACKEND — INTEGRAÇÃO COM IA =====================
+// A chave da API fica salva no localStorage para não ser exposta no código-fonte.
+// O administrador configura a chave uma única vez pelo painel de configurações.
 
+function getApiKey() {
+  return localStorage.getItem('ngames_api_key') || '';
+}
 
-// Função central para chamar a IA (usa proxy CORS para funcionar sem servidor)
+function setApiKey(key) {
+  localStorage.setItem('ngames_api_key', key.trim());
+}
+
+// Função central para chamar a API da Anthropic (sem proxy CORS inseguro)
 async function callClaude(messages, max_tokens = 1000) {
-  const PROXY = 'https://corsproxy.io/?';
-  const TARGET = 'https://api.anthropic.com/v1/messages';
-  const resp = await fetch(PROXY + encodeURIComponent(TARGET), {
+  const key = getApiKey();
+  if (!key) {
+    throw new Error('API_KEY_MISSING');
+  }
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
+      'x-api-key': key,
       'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens, messages }),
   });
   if (!resp.ok) {
     const err = await resp.text();
+    if (resp.status === 401) throw new Error('API_KEY_INVALID');
     throw new Error('Erro API (' + resp.status + '): ' + err);
   }
   const data = await resp.json();
   return data.content.map(i => i.text || '').join('').replace(/```json|```/g, '').trim();
+}
+
+// Exibe modal de configuração da API key
+function openApiKeyConfig() {
+  const cur = getApiKey();
+  openModal(`
+    <h2>🔑 Configurar Chave da API</h2>
+    <p style="color:var(--gray-dark);font-size:0.93rem;margin-bottom:16px">
+      Para usar os recursos de IA (atividades, jogos, quadrinhos), insira sua chave da API da Anthropic.<br>
+      A chave fica salva apenas neste navegador e nunca é enviada a terceiros.
+    </p>
+    <div class="form-group">
+      <label>Chave da API Anthropic (sk-ant-...)</label>
+      <input type="password" id="api-key-input" value="${cur}" placeholder="sk-ant-api03-..." autocomplete="off">
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="saveApiKey()">💾 Salvar chave</button>
+      <button class="btn btn-gray" onclick="testApiKey()">🧪 Testar conexão</button>
+      ${cur ? '<button class="btn btn-outline" onclick="clearApiKey()">🗑️ Remover chave</button>' : ''}
+    </div>
+    <div id="api-key-status" style="margin-top:12px;font-weight:600;font-size:0.92rem"></div>
+    <p style="color:var(--gray-dark);font-size:0.82rem;margin-top:14px">
+      Obtenha sua chave em: <a href="https://console.anthropic.com/" target="_blank" rel="noopener" style="color:var(--blue)">console.anthropic.com</a>
+    </p>`);
+}
+
+function saveApiKey() {
+  const v = document.getElementById('api-key-input').value.trim();
+  if (!v.startsWith('sk-ant-')) {
+    document.getElementById('api-key-status').innerHTML = '<span style="color:var(--red)">⚠️ A chave deve começar com sk-ant-</span>';
+    return;
+  }
+  setApiKey(v);
+  document.getElementById('api-key-status').innerHTML = '<span style="color:#166534">✅ Chave salva com sucesso!</span>';
+}
+
+async function testApiKey() {
+  const v = document.getElementById('api-key-input').value.trim();
+  if (!v) { document.getElementById('api-key-status').innerHTML = '<span style="color:var(--red)">Digite uma chave primeiro.</span>'; return; }
+  setApiKey(v);
+  const statusEl = document.getElementById('api-key-status');
+  statusEl.innerHTML = '<span style="color:var(--gray-dark)">🔄 Testando conexão...</span>';
+  try {
+    const result = await callClaude([{ role: 'user', content: 'Responda apenas: OK' }], 10);
+    statusEl.innerHTML = '<span style="color:#166534">✅ Conexão funcionando! IA pronta para usar.</span>';
+  } catch(e) {
+    if (e.message === 'API_KEY_INVALID') statusEl.innerHTML = '<span style="color:var(--red)">❌ Chave inválida. Verifique e tente novamente.</span>';
+    else statusEl.innerHTML = `<span style="color:var(--red)">❌ Erro: ${e.message}</span>`;
+  }
+}
+
+function clearApiKey() {
+  localStorage.removeItem('ngames_api_key');
+  document.getElementById('api-key-status').innerHTML = '<span style="color:#92400e">🗑️ Chave removida.</span>';
+  document.getElementById('api-key-input').value = '';
+}
+
+// Wrapper que trata erros de API key ausente/inválida com UX amigável
+async function callClaudeSafe(messages, max_tokens, onLoading, onError) {
+  try {
+    return await callClaude(messages, max_tokens);
+  } catch(e) {
+    if (e.message === 'API_KEY_MISSING' || e.message === 'API_KEY_INVALID') {
+      if (onError) onError(`<p style="color:#fca5a5;margin-bottom:12px">⚠️ ${e.message === 'API_KEY_MISSING' ? 'A chave da API não está configurada.' : 'Chave da API inválida.'}</p>
+        <button class="btn" style="background:rgba(255,255,255,0.2);color:white" onclick="openApiKeyConfig()">🔑 Configurar Chave da API</button>`);
+      return null;
+    }
+    throw e;
+  }
 }
 
 // ===================== DATA STORE =====================
@@ -531,7 +613,7 @@ const GAMES = [
   { id:3, name:'Jogo da Memória', icon:'🃏', desc:'Combine pares de conceitos e definições!', minLevel:3 },
   { id:4, name:'Batalha de Conhecimento', icon:'⚔️', desc:'Desafie outros alunos em duelos de perguntas!', minLevel:5 },
   { id:5, name:'Missão Matemática', icon:'🚀', desc:'Aventura espacial resolvendo problemas!', minLevel:7 },
-  { id:6, name:'Historia em HQ', icon:'📚', desc:'Aprenda história em quadrinhos interativas!', minLevel:10 },
+  { id:6, name:'História em Quadrinhos', icon:'📚', desc:'Aprenda história em quadrinhos interativas!', minLevel:10 },
 ];
 
 function loadDB() {
@@ -630,6 +712,9 @@ function startApp() {
   // Show teacher/admin menus
   document.getElementById('prof-menu').style.display = (currentUser.role === 'teacher') ? '' : 'none';
   document.getElementById('admin-menu').style.display = (currentUser.role === 'admin') ? '' : 'none';
+  // Botão de configuração da API key para admin e professores
+  const isStaff = currentUser.role === 'admin' || currentUser.role === 'teacher';
+  document.getElementById('api-key-btn').style.display = isStaff ? '' : 'none';
   renderSection('feed');
 }
 function updateNavXP() {
@@ -911,10 +996,9 @@ async function generateActivity(contentId, subj, titleEnc) {
   const subjName = SUBJECTS[subj]?.name || subj;
   container.innerHTML = `
     <div class="activity-card">
-      <div class="ai-loading"><div class="ai-spinner"></div><span>A IA está gerando uma atividade inclusiva para você...</span></div>
+      <div class="ai-loading"><div class="ai-spinner"></div><span>🤖 A IA está gerando uma atividade inclusiva para você...</span></div>
     </div>`;
-  try {
-    const prompt = `Você é uma professora especialista em educação inclusiva para alunos neurodivergentes (TDAH, autismo, dislexia, etc).
+  const prompt = `Você é uma professora especialista em educação inclusiva para alunos neurodivergentes (TDAH, autismo, dislexia, etc).
     
 Crie uma atividade educacional CURTA e MUITO INCLUSIVA sobre o conteúdo: "${title}" da matéria de ${subjName}.
 
@@ -938,11 +1022,21 @@ Regras obrigatórias:
     }
   ]
 }`;
-    const raw = await callClaude([{ role: 'user', content: prompt }], 1000);
+  const raw = await callClaudeSafe(
+    [{ role: 'user', content: prompt }],
+    1000,
+    null,
+    (errHtml) => {
+      container.innerHTML = `<div class="activity-card">${errHtml}</div>`;
+    }
+  );
+  if (!raw) return;
+  try {
     const act = JSON.parse(raw);
     renderActivityInCard(container, act, contentId, subj);
   } catch (e) {
-    container.innerHTML = `<div class="activity-card"><p>Não foi possível gerar a atividade agora. Tente novamente em instantes.</p></div>`;
+    container.innerHTML = `<div class="activity-card"><p>⚠️ Não foi possível gerar a atividade agora. Tente novamente em instantes.</p>
+      <button class="btn" style="background:rgba(255,255,255,0.2);color:white;margin-top:10px" onclick="generateActivity(${contentId},'${subj}','${titleEnc}')">🔄 Tentar novamente</button></div>`;
   }
 }
 
@@ -1030,26 +1124,243 @@ function playGame(id) {
 async function loadGame(id) {
   const area = document.getElementById('game-area');
   if (!area) return;
+
   if (id === 1) {
-    area.innerHTML = `<div class="ai-loading"><div class="ai-spinner" style="border-color:rgba(19,64,166,0.2);border-top-color:var(--blue)"></div><span>Gerando quiz...</span></div>`;
+    // Quiz Rápido com IA
+    area.innerHTML = `<div class="ai-loading"><div class="ai-spinner" style="border-color:rgba(19,64,166,0.2);border-top-color:var(--blue)"></div><span>🤖 Gerando quiz personalizado...</span></div>`;
+    const raw = await callClaudeSafe(
+      [{role:'user',content:'Crie 5 perguntas de quiz educacional variadas e interessantes para alunos do ensino fundamental, abrangendo diferentes matérias. Use linguagem simples e emojis. Responda APENAS em JSON: {"perguntas":[{"texto":"...","alternativas":["A)...","B)...","C)...","D)..."],"correta":0,"explicacao":"..."}]}'}],
+      1000,
+      null,
+      (errHtml) => { area.innerHTML = errHtml; }
+    );
+    if (!raw) return;
     try {
-      const raw = await callClaude([{role:'user',content:'Crie 3 perguntas de quiz educacional variadas para alunos do ensino fundamental. Responda APENAS em JSON: {"perguntas":[{"texto":"...","alternativas":["A)...","B)...","C)...","D)..."],"correta":0}]}'}], 800);
       const quiz = JSON.parse(raw);
-      let score = 0, answered = 0;
       area.innerHTML = `
         <div id="quiz-questions">
           ${quiz.perguntas.map((q,qi)=>`
-            <div style="margin-bottom:20px">
-              <div style="font-weight:700;margin-bottom:10px">${qi+1}. ${q.texto}</div>
-              ${q.alternativas.map((alt,ai)=>`<div class="ai-option" id="gopt-${qi}-${ai}" onclick="checkGameAnswer(${qi},${ai},${ai===q.correta})" style="color:white">${alt}</div>`).join('')}
+            <div style="margin-bottom:20px;background:rgba(255,255,255,0.08);border-radius:12px;padding:16px">
+              <div style="font-weight:700;margin-bottom:10px;color:white">${qi+1}. ${q.texto}</div>
+              ${q.alternativas.map((alt,ai)=>`<div class="ai-option" id="gopt-${qi}-${ai}" onclick="checkGameAnswer(${qi},${ai},${ai===q.correta},'${encodeURIComponent(q.explicacao||'')}')" style="color:white">${alt}</div>`).join('')}
               <div id="gfb-${qi}" style="margin-top:8px;font-weight:700;display:none"></div>
             </div>`).join('')}
         </div>
-        <div id="game-score" style="display:none;text-align:center;padding:16px;font-size:1.2rem;font-weight:800"></div>`;
+        <div id="game-score" style="display:none;text-align:center;padding:16px;font-size:1.2rem;font-weight:800;color:white"></div>`;
       window._gameState = { total: quiz.perguntas.length, correct: 0, answered: 0 };
-    } catch(e) { area.innerHTML = '<p>Erro ao carregar o quiz. Tente novamente.</p>'; }
+    } catch(e) { area.innerHTML = '<p style="color:white">⚠️ Erro ao carregar o quiz. Tente novamente.</p>'; }
+
+  } else if (id === 2) {
+    // Caça Palavras
+    area.innerHTML = `<div class="ai-loading"><div class="ai-spinner" style="border-color:rgba(19,64,166,0.2);border-top-color:var(--blue)"></div><span>🔠 Gerando caça-palavras...</span></div>`;
+    const raw = await callClaudeSafe(
+      [{role:'user',content:'Crie um caça-palavras simples para ensino fundamental. Gere 6 palavras educacionais (de matérias escolares) e um grid de letras 10x10 onde essas palavras aparecem (horizontal ou vertical). Responda APENAS em JSON: {"palavras":["..."],"grid":[["A","B",...],...],"tema":"..."} O grid deve ser uma matriz 10x10 de letras maiúsculas, com as palavras realmente embutidas nele.'}],
+      1200,
+      null,
+      (errHtml) => { area.innerHTML = errHtml; }
+    );
+    if (!raw) return;
+    try {
+      const cw = JSON.parse(raw);
+      window._cwFound = new Set();
+      window._cwWords = cw.palavras.map(p => p.toUpperCase());
+      area.innerHTML = `
+        <p style="color:white;font-weight:700;margin-bottom:8px">🎯 Tema: ${cw.tema}</p>
+        <p style="color:rgba(255,255,255,0.8);font-size:0.88rem;margin-bottom:14px">Clique nas letras para selecionar as palavras!</p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+          ${cw.palavras.map(w=>`<span id="word-${w.toUpperCase()}" style="background:rgba(255,255,255,0.15);color:white;padding:4px 12px;border-radius:20px;font-weight:700;font-size:0.9rem">${w}</span>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:3px;max-width:320px;margin:0 auto" id="cw-grid">
+          ${cw.grid.flat().map((l,idx)=>`<div class="cw-cell" data-idx="${idx}" onclick="selectCWCell(this,'${l}')" style="background:rgba(255,255,255,0.12);color:white;text-align:center;padding:7px 2px;cursor:pointer;border-radius:5px;font-weight:700;font-size:0.95rem;user-select:none">${l}</div>`).join('')}
+        </div>
+        <div id="cw-status" style="margin-top:12px;color:white;font-weight:700"></div>`;
+      window._cwSelection = [];
+    } catch(e) { area.innerHTML = '<p style="color:white">⚠️ Erro ao gerar o caça-palavras. Tente novamente.</p>'; }
+
+  } else if (id === 3) {
+    // Jogo da Memória com IA
+    area.innerHTML = `<div class="ai-loading"><div class="ai-spinner" style="border-color:rgba(19,64,166,0.2);border-top-color:var(--blue)"></div><span>🃏 Gerando jogo da memória...</span></div>`;
+    const raw = await callClaudeSafe(
+      [{role:'user',content:'Crie 6 pares de conceito+definição para um jogo da memória educacional (ensino fundamental). Use linguagem simples e emojis. Responda APENAS em JSON: {"pares":[{"conceito":"...","definicao":"..."}]}'}],
+      800,
+      null,
+      (errHtml) => { area.innerHTML = errHtml; }
+    );
+    if (!raw) return;
+    try {
+      const mem = JSON.parse(raw);
+      const cards = [];
+      mem.pares.forEach((p,i) => {
+        cards.push({ id: i*2, pairId: i, text: p.conceito, type:'conceito' });
+        cards.push({ id: i*2+1, pairId: i, text: p.definicao, type:'definicao' });
+      });
+      cards.sort(() => Math.random()-0.5);
+      window._memCards = cards;
+      window._memFlipped = [];
+      window._memMatched = new Set();
+      window._memMoves = 0;
+      area.innerHTML = `
+        <p style="color:rgba(255,255,255,0.8);margin-bottom:12px;font-size:0.9rem">🃏 Combine conceito com sua definição! Movimentos: <span id="mem-moves">0</span></p>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px" id="mem-grid">
+          ${cards.map((c,i)=>`<div class="mem-card" id="mem-${i}" data-card-idx="${i}" onclick="flipMemCard(${i})" style="background:rgba(255,255,255,0.2);color:white;border-radius:10px;padding:10px 6px;cursor:pointer;min-height:60px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:0.82rem;font-weight:600;border:2px solid rgba(255,255,255,0.1)">❓</div>`).join('')}
+        </div>
+        <div id="mem-result" style="margin-top:14px;color:white;font-weight:800;font-size:1.1rem;text-align:center"></div>`;
+    } catch(e) { area.innerHTML = '<p style="color:white">⚠️ Erro ao gerar o jogo. Tente novamente.</p>'; }
+
+  } else if (id === 6) {
+    // História em Quadrinhos com IA
+    await loadComicsGame(area);
   } else {
-    area.innerHTML = `<p style="color:var(--gray-dark);text-align:center;padding:24px">Este jogo estará disponível em breve! 🚀</p>`;
+    area.innerHTML = `<p style="color:var(--gray-dark);text-align:center;padding:24px">🚀 Este jogo estará disponível em breve!</p>`;
+  }
+}
+
+// Funções do Caça-Palavras
+window.selectCWCell = function(el, letter) {
+  if (!window._cwSelection) window._cwSelection = [];
+  el.style.background = 'rgba(255,215,0,0.5)';
+  window._cwSelection.push({ el, letter });
+  if (window._cwSelection.length >= 2) {
+    const word = window._cwSelection.map(s => s.letter).join('');
+    const wordRev = word.split('').reverse().join('');
+    const found = window._cwWords.find(w => w === word || w === wordRev);
+    if (found && !window._cwFound.has(found)) {
+      window._cwFound.add(found);
+      window._cwSelection.forEach(s => s.el.style.background = 'rgba(52,211,153,0.5)');
+      const wordEl = document.getElementById('word-' + found);
+      if (wordEl) { wordEl.style.textDecoration = 'line-through'; wordEl.style.opacity = '0.5'; }
+      document.getElementById('cw-status').textContent = `✅ Palavra encontrada: ${found}!`;
+      if (window._cwFound.size === window._cwWords.length) {
+        document.getElementById('cw-status').textContent = '🎉 Parabéns! Você encontrou todas as palavras!';
+        if (currentUser.role === 'student') addXP(50);
+      }
+    } else {
+      setTimeout(() => { window._cwSelection.forEach(s => { if (!Array.from(window._cwFound).some(f => s.letter === f.slice(0))) s.el.style.background = 'rgba(255,255,255,0.12)'; }); }, 500);
+    }
+    if (!found || window._cwFound.has(found)) window._cwSelection = [];
+  }
+};
+
+// Funções do Jogo da Memória
+window.flipMemCard = function(idx) {
+  if (!window._memCards || window._memFlipped.length >= 2) return;
+  if (window._memMatched.has(idx) || window._memFlipped.includes(idx)) return;
+  const card = window._memCards[idx];
+  const el = document.getElementById('mem-' + idx);
+  el.textContent = card.text;
+  el.style.background = card.type === 'conceito' ? 'rgba(19,64,166,0.6)' : 'rgba(124,58,237,0.6)';
+  el.style.border = '2px solid rgba(255,255,255,0.4)';
+  window._memFlipped.push(idx);
+  if (window._memFlipped.length === 2) {
+    window._memMoves++;
+    document.getElementById('mem-moves').textContent = window._memMoves;
+    const [i1, i2] = window._memFlipped;
+    const c1 = window._memCards[i1], c2 = window._memCards[i2];
+    if (c1.pairId === c2.pairId && c1.type !== c2.type) {
+      window._memMatched.add(i1); window._memMatched.add(i2);
+      window._memFlipped = [];
+      if (window._memMatched.size === window._memCards.length) {
+        document.getElementById('mem-result').textContent = `🏆 Parabéns! Completou em ${window._memMoves} movimentos!`;
+        if (currentUser.role === 'student') addXP(60);
+      }
+    } else {
+      setTimeout(() => {
+        [i1,i2].forEach(i => {
+          const e = document.getElementById('mem-' + i);
+          e.textContent = '❓';
+          e.style.background = 'rgba(255,255,255,0.2)';
+          e.style.border = '2px solid rgba(255,255,255,0.1)';
+        });
+        window._memFlipped = [];
+      }, 1200);
+    }
+  }
+};
+
+// História em Quadrinhos com IA
+async function loadComicsGame(area) {
+  const temas = ['Descobrimento do Brasil', 'Sistema Solar', 'Revolução Industrial', 'Ecossistemas da Amazônia', 'Vida de Machado de Assis', 'Independência do Brasil'];
+  const tema = temas[Math.floor(Math.random() * temas.length)];
+  area.innerHTML = `
+    <div style="text-align:center;padding:20px">
+      <div class="ai-spinner" style="border-color:rgba(19,64,166,0.2);border-top-color:var(--blue);width:32px;height:32px;margin:0 auto 12px"></div>
+      <p style="color:var(--text)">📚 Gerando história em quadrinhos sobre:<br><strong>${tema}</strong></p>
+    </div>`;
+  const prompt = `Crie uma história em quadrinhos educacional CURTA (4 quadrinhos) sobre: "${tema}".
+Para alunos do ensino fundamental. Use linguagem simples, emojis e seja divertido e educativo.
+
+Responda APENAS em JSON:
+{
+  "titulo": "...",
+  "tema": "${tema}",
+  "quadrinhos": [
+    {
+      "numero": 1,
+      "cenario": "Descrição visual do cenário com emojis",
+      "personagem": "Nome do personagem",
+      "fala": "Fala do personagem (curta e clara)",
+      "narrativa": "Texto narrativo pequeno do quadrinho",
+      "cor_fundo": "#hexcolor (cor suave e educativa)"
+    }
+  ],
+  "curiosidade": "Uma curiosidade interessante sobre o tema",
+  "pergunta": "Uma pergunta reflexiva para os alunos"
+}`;
+  const raw = await callClaudeSafe(
+    [{role:'user', content: prompt}],
+    1200,
+    null,
+    (errHtml) => {
+      area.innerHTML = `<div style="padding:20px">${errHtml}</div>`;
+    }
+  );
+  if (!raw) return;
+  try {
+    const hq = JSON.parse(raw);
+    area.innerHTML = `
+      <style>
+        .hq-container { font-family: 'Segoe UI', Arial, sans-serif; }
+        .hq-titulo { font-size:1.4rem; font-weight:900; text-align:center; margin-bottom:18px; color:var(--blue); }
+        .hq-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px; }
+        .quadrinho { border-radius:14px; border:3px solid #222; overflow:hidden; box-shadow:4px 4px 0 #222; }
+        .quadrinho-header { padding:8px 12px; font-size:0.75rem; font-weight:700; background:#222; color:white; }
+        .quadrinho-body { padding:14px; }
+        .cenario { font-size:1.8rem; margin-bottom:6px; line-height:1.3; }
+        .personagem-label { font-size:0.72rem; font-weight:700; color:#555; text-transform:uppercase; letter-spacing:0.5px; }
+        .fala-balao { background:white; border:2px solid #222; border-radius:12px; padding:8px 12px; margin:8px 0; font-size:0.88rem; font-weight:600; line-height:1.4; position:relative; }
+        .fala-balao::before { content:'💬'; position:absolute; top:-10px; left:10px; font-size:1rem; }
+        .narrativa { font-size:0.8rem; color:#444; font-style:italic; margin-top:6px; }
+        .curiosidade-box { background:#fef9c3; border-left:4px solid #f59e0b; border-radius:8px; padding:14px 16px; margin-bottom:14px; }
+        .pergunta-box { background:#e0e7ff; border-left:4px solid #6366f1; border-radius:8px; padding:14px 16px; }
+        @media(max-width:500px) { .hq-grid { grid-template-columns:1fr; } }
+      </style>
+      <div class="hq-container">
+        <div class="hq-titulo">📚 ${hq.titulo}</div>
+        <div class="hq-grid">
+          ${hq.quadrinhos.map(q => `
+            <div class="quadrinho">
+              <div class="quadrinho-header">Quadrinho ${q.numero}</div>
+              <div class="quadrinho-body" style="background:${q.cor_fundo || '#f8faff'}">
+                <div class="cenario">${q.cenario}</div>
+                <div class="personagem-label">💬 ${q.personagem} diz:</div>
+                <div class="fala-balao">${q.fala}</div>
+                <div class="narrativa">${q.narrativa}</div>
+              </div>
+            </div>`).join('')}
+        </div>
+        <div class="curiosidade-box">
+          <strong>🌟 Sabia que...</strong><br>${hq.curiosidade}
+        </div>
+        <div class="pergunta-box">
+          <strong>🤔 Para refletir:</strong><br>${hq.pergunta}
+        </div>
+        <div style="text-align:center;margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="loadComicsGame(document.getElementById('game-area'))">🔄 Nova História em Quadrinhos</button>
+          ${currentUser.role === 'student' ? `<button class="btn btn-outline" onclick="addXP(40);showToast('⭐ +40 XP por ler a HQ!');this.disabled=true;this.textContent='✅ XP conquistado!'">⭐ Concluir (+40 XP)</button>` : ''}
+        </div>
+      </div>`;
+  } catch(e) {
+    area.innerHTML = `<p>⚠️ Erro ao gerar a história. <button class="btn btn-primary" onclick="loadComicsGame(document.getElementById('game-area'))">Tentar novamente</button></p>`;
   }
 }
 
